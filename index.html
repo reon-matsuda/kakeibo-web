@@ -174,6 +174,11 @@
   <div class="card">
     <details><summary>収入・支出の科目</summary><div id="acPL"></div></details>
   </div>
+  <div class="card">
+    <div class="sec">標準の科目をまとめて追加</div>
+    <div class="sub">旧アプリ（家計＆副業 統合会計データベース）と同じ構成の科目のうち、まだ無いものを追加します。同じ名前の科目はそのままです。</div>
+    <button class="btn small outline" id="acSeed" style="margin-top:8px;">追加される科目を確認</button>
+  </div>
   <div id="acErr" class="err" style="margin:0 16px;"></div>
 </div>
 
@@ -241,10 +246,9 @@
   <strong>割り勘を家計に反映する設定</strong>
   <label>自分の名前（割り勘のメンバー名と同じ表記）</label><input id="lgMe" placeholder="例：自分">
   <label>費用の科目（自分の負担額が入る。種別は変動費などに）</label><select id="lgExp"></select>
-  <label>立替金の科目（資産。「家計反映対象」はオフにしておく）</label><select id="lgRec"></select>
   <label>支払元の口座（普段お金が出る口座）</label><select id="lgPay"></select>
   <div class="row" style="margin-top:8px;"><button class="btn small" id="lgSave">保存</button><span class="ok" id="lgMsg"></span></div>
-  <div class="note">割り勘の支払いを登録すると、自分の立替額と負担額から家計の伝票を1枚つくります。負担額だけが自由費を減らし、他人の分の立替は「立替金」に残ります。実際に送金したら、割り勘画面の精算プランで「送金済みにする」を押すと、立替金と支払元の口座の伝票を自動で作ります。</div>
+  <div class="note">割り勘の支払いを登録すると、家計の伝票を1枚つくります。自分の負担額だけが自由費を減らします。相手の分を立て替えた額・立て替えてもらった額は、<b>相手の名前の口座</b>（「口座」タブの「貸し借り（人）」）に入り、その残高が「貸している額（マイナスなら借りている額）」になります。相手の口座が無ければ、割り勘のメンバー名で自動で作ります。実際に送金したら、精算プランの「送金済みにする」を押すと、相手の口座と支払元の口座の伝票を作ります。</div>
 
   <hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">
   <strong>他アプリとの連携</strong>
@@ -297,7 +301,7 @@
     <details>
       <summary>＋ 新しいプロジェクトを作る</summary>
       <label>プロジェクト名</label><input id="wkNewName" placeholder="例：沖縄旅行">
-      <label>メンバー（読点・カンマ区切り、2人以上）</label><input id="wkNewMembers" placeholder="例：自分、あやか、こうへい">
+      <label>メンバー（人の口座から選ぶ。自分は自動で入ります）</label><input id="wkNewMembers" placeholder="下の名前を押して選ぶ">
       <div id="wkPeople" class="row" style="flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
       <button class="btn small" id="wkNewBtn" data-act="newProject" style="margin-top:8px;">作成</button>
     </details>
@@ -555,20 +559,22 @@ document.getElementById('view-summary').addEventListener('click', e => {
 // ---- 口座（v1.8） ----
 let AC = null;
 async function loadAccounts(){
-  const err = document.getElementById('acErr'); err.textContent = '';
+  const err = document.getElementById('acErr'); err.textContent = ''; err.className = 'err';
   try {
     AC = await rpc('getAccountBalances', []);
     const t = AC.totals, set = (id, v) => { document.getElementById(id).textContent = v; };
     set('acNet', yen(t.net)); set('acAssets', yen(t.assets)); set('acLiab', yen(t.liabilities)); set('acInvest', yen(t.invested));
     document.getElementById('acNet').classList.toggle('minus', t.net < 0);
     set('acAsOf', AC.asOf + ' 時点。初期残高と、入力したすべての伝票から計算しています。');
-    const row = a => `<button class="acc-row" data-acc="${esc(a.勘定科目ID)}"><span><span class="nm">${esc(a.勘定科目名)}</span>${a.投資フラグ ? ' <span class="pill">投資</span>' : ''}<br><span class="sub">${a.分類 === '負債' ? '今月 使った ' + yen(a.今月の貸方) + '／返した ' + yen(a.今月の借方) : '今月 入 ' + yen(a.今月の借方) + '／出 ' + yen(a.今月の貸方)}</span></span><span class="amt ${a.残高 < 0 ? 'minus' : ''}">${yen(a.残高)}</span></button>`;
-    const grp = (label, list, total) => list.length ? `<div class="grp"><span>${label}</span><span>${yen(total)}</span></div>` + list.map(row).join('') : '';
-    const A = AC.accounts.filter(a => a.分類 === '資産' && a.勘定科目名 !== '立替金'), R = AC.accounts.filter(a => a.分類 === '資産' && a.勘定科目名 === '立替金');
-    const L = AC.accounts.filter(a => a.分類 === '負債');
+    const row = a => `<button class="acc-row" data-acc="${esc(a.勘定科目ID)}"><span><span class="nm">${esc(a.勘定科目名)}</span>${a.投資フラグ ? ' <span class="pill">投資</span>' : ''}${a.グループ === '貸し借り（人）' && a.残高 ? ' <span class="pill' + (a.残高 > 0 ? '' : ' done') + '">' + (a.残高 > 0 ? '貸し' : '借り') + '</span>' : ''}<br><span class="sub">${a.分類 === '負債' ? '今月 使った ' + yen(a.今月の貸方) + '／返した ' + yen(a.今月の借方) : a.グループ === '貸し借り（人）' ? '今月 貸した ' + yen(a.今月の借方) + '／返してもらった・借りた ' + yen(a.今月の貸方) : '今月 入 ' + yen(a.今月の借方) + '／出 ' + yen(a.今月の貸方)}</span></span><span class="amt ${a.残高 < 0 ? 'minus' : ''}">${yen(a.残高)}</span></button>`;
+    const grp = (label, list, total, note) => list.length ? `<div class="grp"><span>${label}</span><span>${yen(total)}</span></div>` + (note ? `<div class="note" style="margin-top:2px;">${note}</div>` : '') + list.map(row).join('') : '';
     const sum = l => l.reduce((s, a) => s + a.残高, 0);
-    document.getElementById('acList').innerHTML = (grp('資産', A, sum(A)) + grp('立替金（あとで受け取る分）', R, sum(R)) + grp('負債（カード・借入など）', L, sum(L))) ||
-      '<div class="sub" style="margin-top:8px;">まだ口座がありません。「＋ 科目を追加」で、銀行・現金・カードなどを登録してください。</div>';
+    const bs = AC.accounts.filter(a => a.分類 === '資産' || a.分類 === '負債');
+    const order = AC.groups || [];
+    const gnames = order.filter(g => bs.some(a => a.グループ === g)).concat(Array.from(new Set(bs.map(a => a.グループ))).filter(g => order.indexOf(g) < 0));
+    document.getElementById('acList').innerHTML = gnames.map(g => { const l = bs.filter(a => a.グループ === g);
+      return grp(esc(g) + (l[0].分類 === '負債' ? '（負債）' : ''), l, sum(l), g === '貸し借り（人）' ? 'プラス＝貸している額（受け取る分）、マイナス＝借りている額（払う分）' : ''); }).join('') ||
+      '<div class="sub" style="margin-top:8px;">まだ口座がありません。下の「標準の科目をまとめて追加」か「＋ 科目を追加」で登録してください。</div>';
     const inc = AC.monthIncome.reduce((s, a) => s + a.amount, 0), exp = AC.monthExpense.reduce((s, a) => s + a.amount, 0);
     set('acInc', yen(inc)); set('acExp', yen(exp));
     const max = AC.monthExpense.length ? AC.monthExpense[0].amount : 0;
@@ -584,6 +590,18 @@ async function loadAccounts(){
 }
 document.getElementById('acReload').onclick = loadAccounts;
 document.getElementById('acNew').onclick = () => openAccountForm(null);
+document.getElementById('acSeed').onclick = async () => {
+  try {
+    const r = await rpc('seedStandardAccounts', [true]);
+    const by = {};
+    r.added.forEach(a => { const k = a.グループ || a.分類; (by[k] = by[k] || []).push(a); });
+    openSheet('標準の科目をまとめて追加', r.added.length ? `<div class="sub">${r.added.length}件を追加します（同じ名前の ${r.skipped.length}件はそのまま）。</div>` +
+      Object.keys(by).map(k => `<div class="grp"><span>${esc(k)}</span><span>${by[k].length}件</span></div><div class="sub" style="line-height:1.8;">${by[k].map(a => esc(a.勘定科目名) + (a.初期残高 ? '（初期残高 ' + yen(a.初期残高) + '）' : '')).join('、')}</div>`).join('') +
+      `<div class="note">初期残高は旧アプリの画面に出ていた残高です。ほかの口座は0円で入るので、「口座」タブで各口座をタップし「残高を実際の額に合わせる」で今の残高にしてください。</div>
+       <div class="row" style="margin-top:12px;"><button class="btn" id="acSeedGo">追加する</button></div><div id="acSeedMsg" class="err"></div>`
+      : '<div class="sub">追加する科目はありません（すべてそろっています）。</div>');
+  } catch(e) { document.getElementById('acErr').textContent = e.message; }
+};
 document.getElementById('view-accounts').addEventListener('click', e => {
   const b = e.target.closest('[data-acc]'); if (b) openAccountSheet(b.dataset.acc);
 });
@@ -611,6 +629,12 @@ async function openAccountSheet(id){
 }
 document.getElementById('sheet').addEventListener('click', async e => {
   const t = e.target;
+  if (t.id === 'acSeedGo') {
+    try { const r = await rpc('seedStandardAccounts', [false]); accountsCache = null; LS.masters = null; closeSheet(); await loadAccounts();
+      document.getElementById('acErr').className = 'ok'; document.getElementById('acErr').textContent = r.added.length + '件の科目を追加しました'; }
+    catch(err) { document.getElementById('acSeedMsg').textContent = err.message; }
+    return;
+  }
   if (t.id === 'accEdit') { const a = AC.accounts.find(x => x.勘定科目ID === t.dataset.id); openAccountForm(a); return; }
   if (t.id === 'adjGo') {
     const v = document.getElementById('adjAmt').value, msg = document.getElementById('adjMsg');
@@ -632,7 +656,8 @@ document.getElementById('sheet').addEventListener('click', async e => {
         await rpc('saveAccount', [{ 勘定科目ID: t.dataset.id || '', 勘定科目名: document.getElementById('afName').value.trim(),
           分類: document.getElementById('afCls').value, 種別: document.getElementById('afType').value, 事業区分: document.getElementById('afSeg').value,
           初期残高: document.getElementById('afInit').value === '' ? 0 : Number(document.getElementById('afInit').value),
-          家計反映対象: document.getElementById('afHH').checked, 投資フラグ: document.getElementById('afInv').checked }]);
+          家計反映対象: document.getElementById('afHH').checked, 投資フラグ: document.getElementById('afInv').checked,
+          グループ: document.getElementById('afGrpBox').classList.contains('hidden') ? '' : document.getElementById('afGrp').value }]);
       }
       accountsCache = null; LS.masters = null;
       closeSheet();
@@ -649,15 +674,25 @@ document.getElementById('sheet').addEventListener('change', e => {
   document.getElementById('afInitBox').classList.toggle('hidden', pl);
   document.getElementById('afHH').checked = pl;       // 収益・費用は家計に数える／口座は数えない が基本
   if (!pl) document.getElementById('afType').value = '';
+  const bsCls = c === '資産' || c === '負債';
+  document.getElementById('afGrpBox').classList.toggle('hidden', !bsCls);
+  if (bsCls) document.getElementById('afGrp').innerHTML = grpOpts(c, '');
 });
+const ASSET_GROUPS = ['銀行', '現金', '電子マネー・決済', 'ポイント', '商品券', '証券・投資', '貸し借り（人）', 'その他の資産'];
+const LIAB_GROUPS = ['クレジットカード', '借入', 'その他の負債'];
+function grpOpts(cls, sel){
+  const list = cls === '負債' ? LIAB_GROUPS : ASSET_GROUPS;
+  return list.map(g => `<option value="${esc(g)}"${g === sel ? ' selected' : ''}>${esc(g)}</option>`).join('');
+}
 function openAccountForm(a){
-  const v = a || { 勘定科目名: '', 分類: '資産', 種別: '', 事業区分: '家計', 初期残高: 0, 家計反映対象: false, 投資フラグ: false };
+  const v = a || { 勘定科目名: '', 分類: '資産', 種別: '', 事業区分: '家計', 初期残高: 0, 家計反映対象: false, 投資フラグ: false, グループ: '銀行' };
   const pl = v.分類 === '収益' || v.分類 === '費用';
   const opt = (list, sel) => list.map(o => `<option value="${esc(o[0])}"${o[0] === sel ? ' selected' : ''}>${esc(o[1])}</option>`).join('');
   openSheet(a ? '科目を編集' : '科目を追加', `
     <label>科目名</label><input id="afName" value="${esc(v.勘定科目名)}" placeholder="例：〇〇銀行、現金、食費">
     <label>分類</label><select id="afCls">${opt([['資産', '資産（銀行・現金・電子マネー・投資・立替金）'], ['負債', '負債（クレジットカード・借入）'], ['収益', '収益（給与・副業などの収入）'], ['費用', '費用（食費・家賃などの支出）'], ['純資産', '純資産（残高調整など）']], v.分類)}</select>
     <div id="afTypeBox" class="${pl ? '' : 'hidden'}"><label>種別（今月の残りのどこに数えるか）</label><select id="afType">${opt([['', '（なし＝費用なら変動費）'], ['給与収入', '給与収入'], ['副業収入', '副業収入'], ['その他収入', 'その他収入'], ['毎月固定費', '毎月固定費'], ['年払い固定費', '年払い固定費'], ['ローン', 'ローン（購入）'], ['変動費', '変動費']], v.種別)}</select></div>
+    <div id="afGrpBox" class="${v.分類 === '資産' || v.分類 === '負債' ? '' : 'hidden'}"><label>グループ（口座画面での並び）</label><select id="afGrp">${grpOpts(v.分類, v.グループ)}</select></div>
     <label>事業区分</label><select id="afSeg">${opt([['家計', '家計'], ['副業', '副業'], ['共通', '共通']], v.事業区分 || '家計')}</select>
     <div id="afInitBox" class="${pl ? 'hidden' : ''}"><label>初期残高（使い始めの日の残高。カードは使った額をプラスで）</label><input id="afInit" type="number" inputmode="numeric" value="${Number(v.初期残高) || 0}"></div>
     <label class="opt" style="margin-top:12px;"><input type="checkbox" class="chk" id="afHH"${v.家計反映対象 ? ' checked' : ''}>家計（今月の残り）に数える</label>
@@ -665,6 +700,7 @@ function openAccountForm(a){
     <div id="afInvBox" class="${v.分類 === '資産' ? '' : 'hidden'}"><label class="opt" style="margin-top:10px;"><input type="checkbox" class="chk" id="afInv"${v.投資フラグ ? ' checked' : ''}>投資先（NISAなど。ここへの入金を「実際の投資額」に数える）</label></div>
     <div class="row" style="margin-top:14px;"><button class="btn" id="afSave" data-id="${esc(a ? a.勘定科目ID : '')}">保存</button>${a ? `<button class="btn outline" id="afDel" data-id="${esc(a.勘定科目ID)}">削除</button>` : ''}</div>
     <div id="afMsg" class="err"></div>
+    <div class="note">グループを「貸し借り（人）」にすると人の口座になり、割り勘のメンバーに選べます（割り勘でもこの名前を使い、名前を変えると割り勘側も変わります）。</div>
     ${a ? '<div class="note">伝票で使った科目は、残高や履歴が合わなくなるので削除できません。名前や設定の変更はいつでもできます。</div>' : ''}`);
 }
 
@@ -771,7 +807,7 @@ function renderListsBody(){
   if (LS.kind === 'accounts') {
     rows = M.accounts.filter(a => qHit(terms, [a.勘定科目名, a.分類, a.種別, a.事業区分, a.投資フラグ === true || String(a.投資フラグ).toUpperCase() === 'TRUE' ? '投資' : ''])).map(a => `<div class="line" data-macc="${esc(a.勘定科目ID)}" style="cursor:pointer;">
       <div class="row" style="justify-content:space-between;"><b>${esc(a.勘定科目名)}</b><span>${a.分類 ? '<span class="pill">' + esc(a.分類) + '</span>' : ''} ${a.種別 ? '<span class="pill">' + esc(a.種別) + '</span>' : ''}</span></div>
-      <div class="sub">事業区分 ${esc(a.事業区分 || '－')}／初期残高 ${yen(a.初期残高)}／家計反映 ${yesNo(a.家計反映対象)}／投資 ${yesNo(a.投資フラグ)}</div></div>`);
+      <div class="sub">${a.グループ ? esc(a.グループ) + '／' : ''}事業区分 ${esc(a.事業区分 || '－')}／初期残高 ${yen(a.初期残高)}／家計反映 ${yesNo(a.家計反映対象)}／投資 ${yesNo(a.投資フラグ)}</div></div>`);
   } else if (LS.kind === 'annual') {
     rows = M.annual.filter(a => qHit(terms, [a.名称, a.勘定科目名, a.初回支払月, a.積立開始月, a.支払月 + '月', a.年額])).map(a => `<div class="line">
       <div class="row" style="justify-content:space-between;"><b>${esc(a.名称)}</b><b>${yen(a.年額)}</b></div>
@@ -907,10 +943,14 @@ function newClientId(){ return 'c' + Date.now().toString(36) + Math.random().toS
 function wkErr(t){ $('wkErr').textContent = t || ''; }
 
 let peopleCache = null;
-async function loadPeopleChips(){
+/** 割り勘のメンバー候補＝人の口座（v1.12：名前は必ず口座名） */
+async function loadPeopleChips(force){
   try {
-    if (!peopleCache) peopleCache = await rpc('getPeople', []);
-    $('wkPeople').innerHTML = peopleCache.map(x => `<button class="btn small outline" data-act="addPerson" data-name="${esc(x.name)}">＋${esc(x.name)}</button>`).join('');
+    if (!peopleCache || force) peopleCache = await rpc('getWarikanPeople', []);
+    $('wkPeople').innerHTML = peopleCache.people.map(n => `<button class="btn small outline" data-act="addPerson" data-name="${esc(n)}">＋${esc(n)}</button>`).join('') +
+      '<button class="btn small" data-act="newPerson">＋ 新しい人の口座</button>' +
+      (peopleCache.me ? '' : '<div class="err" style="width:100%;">先にメニューの「割り勘を家計に反映する設定」で自分の名前を入れてください</div>');
+    if (wk.detail && ME.mode === 'owner' && $('wkAddName')) renderTools(wk.detail, wk.detail.project.ステータス === '精算済み');   // 追加できる人の候補を出し直す
   } catch(e) { /* 候補が出ないだけなので無視 */ }
 }
 async function loadWarikanProjects(selectId){
@@ -957,11 +997,13 @@ function renderWarikan(d){
     <div class="grid2">${d.members.map(m => `<div class="stat"><div class="k">${esc(m)}</div><div class="v">${signed(d.balances[m])}</div>
       <div class="k">立替 ${yen(paid[m])} ／ 負担 ${yen(spent[m])}</div></div>`).join('')}</div>
     <div class="sub" style="margin-top:6px;">＋は受け取る額、−は払う額です。</div>
-    <div class="sub" style="margin-top:10px;">精算プラン（送金回数が最小になる組み合わせ）</div>
+    ${d.pairs && ME.mode === 'owner' ? `<div class="sub" style="margin-top:8px;">家計簿の人の口座（伝票ごとの${esc(d.me)}との貸し借り）：${Object.keys(d.pairs).map(m => esc(m) + ' ' + (d.pairs[m] > 0 ? '貸し ' : d.pairs[m] < 0 ? '借り ' : '') + yen(Math.abs(d.pairs[m]))).join('、')}</div>` : ''}
+    <div class="sub" style="margin-top:10px;">精算プラン（送金回数が最小になる組み合わせ）</div>${d.pairs && ME.mode === 'owner' ? '<div class="note" style="margin-top:2px;">人の口座の額と違って見えても大丈夫です。送金済みにすると、他の人の分をまとめて送った分も含めて人の口座に分けて記録し、全員が終わると0円にそろいます。</div>' : ''}
     ${d.settlement.length ? d.settlement.map(s => `<div class="line"><div>${esc(s.from)} → ${esc(s.to)} ： <b>${yen(s.amount)}</b></div>
       ${ME.mode === 'owner' && !done ? `<div class="row" style="margin-top:6px;"><input type="number" class="st-amt" value="${s.amount}" min="1" step="1" style="flex:1;"><button class="btn small" data-act="settle" data-from="${esc(s.from)}" data-to="${esc(s.to)}">送金済みにする</button></div>` : ''}</div>`).join('') + (ME.mode === 'owner' && !done ? '<div class="note">実際に送金したら「送金済みにする」を押すと、貸し借りがその分だけ減ります。金額を変えれば一部だけの精算も記録できます。' + (d.ledger && d.ledger.ready ? '自分が関わる送金は、家計の伝票（立替金⇔口座）にも自動で入ります。' : '') + '</div>' : '') : '<div class="sub">精算の必要はありません</div>'}
     <details><summary>支払い履歴（${d.payments.length}件）</summary>
-      ${d.payments.map(p => p.種類 === '精算' ? `<div class="line"><div class="row" style="justify-content:space-between;"><b><span class="pill done">精算</span> ${esc(p.摘要 || '')}</b><span>${yen(p.総額)}</span></div>
+      ${d.payments.map(p => p.種類 === '付け替え' ? `<div class="line"><div class="row" style="justify-content:space-between;"><b><span class="pill done">付け替え</span> ${esc(p.摘要 || '')}</b><span>${yen(p.総額)}</span></div>
+        <div class="sub">${esc(dateOnly(p.日付))}　全員の精算が終わったとき、他の人を経由して精算した分を、人の口座どうしで付け替えました</div>${ledgerBadge(d, p)}</div>` : p.種類 === '精算' ? `<div class="line"><div class="row" style="justify-content:space-between;"><b><span class="pill done">精算</span> ${esc(p.摘要 || '')}</b><span>${yen(p.総額)}</span></div>
         <div class="sub">${esc(dateOnly(p.日付))}　送金：${p.payers.map(x => esc(x.メンバー名)).join('、')} → ${p.lines.map(x => esc(x.メンバー名)).join('、')}</div>${ledgerBadge(d, p)}</div>` :
         `<div class="line"><div class="row" style="justify-content:space-between;"><b>${esc(p.摘要 || '（内容なし）')}</b><span>${yen(p.総額)}</span></div>
         <div class="sub">${esc(dateOnly(p.日付))}　立替：${p.payers.map(x => esc(x.メンバー名) + ' ' + yen(x.金額)).join('、')}</div>
@@ -1100,7 +1142,7 @@ function renderTools(d, done){
       </div>
       ${d.ledger && d.ledger.ready && d.ledger.unposted ? `<div class="row" style="margin-top:8px;"><button class="btn small" data-act="postAll">家計に未反映の ${d.ledger.unposted}件をまとめて反映</button></div>` : ''}
       <label>メンバーを追加</label>
-      <div class="row"><input id="wkAddName" placeholder="名前"><button class="btn small" data-act="addMember">追加</button></div>
+      <div class="row"><select id="wkAddName">${((peopleCache && peopleCache.people) || []).filter(n => d.members.indexOf(n) < 0).map(n => `<option>${esc(n)}</option>`).join('') || '<option value="">（追加できる人の口座がありません）</option>'}</select><button class="btn small" data-act="addMember">追加</button><button class="btn small outline" data-act="newPersonAdd">＋ 新しい人</button></div>
       <label>友人に送る専用リンク（このプロジェクトの割り勘だけ見られます）</label>
       <div class="row"><input id="wkKeyName" placeholder="相手の名前"><button class="btn small" data-act="issueKey">発行</button></div>
       <div id="wkKeys"></div>
@@ -1122,7 +1164,8 @@ $('view-warikan').addEventListener('click', async (e) => {
   try {
     if (act === 'submitPayment') return wfSubmit();
     if (act === 'newProject') {
-      const members = $('wkNewMembers').value.split(/[、,，\s]+/).map(x => x.trim()).filter(Boolean);
+      const members = $('wkNewMembers').value.split(/[、,，]+/).map(x => x.trim()).filter(Boolean);
+      if (peopleCache && peopleCache.me && members.indexOf(peopleCache.me) < 0) members.unshift(peopleCache.me);
       const r = await rpc('createWarikanProject', [$('wkNewName').value, members]);
       $('wkNewName').value = ''; $('wkNewMembers').value = '';
       return loadWarikanProjects(r.プロジェクトID);
@@ -1144,14 +1187,24 @@ $('view-warikan').addEventListener('click', async (e) => {
       if (!confirm(`${from} → ${to}　${yen(amt)} を「送金済み」にします。よろしいですか？`)) return;
       b.disabled = true;
       const led = wk.detail.ledger;
-      const post = !!(led && led.ready && (from === led.myName || to === led.myName));
+      const post = !!(led && led.ready);   // 自分が関わらない送金は伝票を作らない（最後の精算で付け替えが要るときに使う）
       const r = await rpc('settleWarikan', [wk.id, from, to, amt, { postToLedger: post, clientId: newClientId() }]);
       renderWarikan(r);
       if (r.ledgerError) wkErr('精算は記録しましたが、家計への反映に失敗しました：' + r.ledgerError);
       return;
     }
+    if (act === 'newPerson' || act === 'newPersonAdd') {
+      const n = (prompt('新しい人の口座の名前（割り勘でもこの名前を使います）') || '').trim();
+      if (!n) return;
+      await rpc('saveAccount', [{ 勘定科目名: n, 分類: '資産', グループ: '貸し借り（人）', 事業区分: '家計', 初期残高: 0, 家計反映対象: false }]);
+      accountsCache = null; LS.masters = null;
+      await loadPeopleChips(true);
+      if (act === 'newPerson') { const el = $('wkNewMembers'); el.value = el.value.split(/[、,，]+/).map(x => x.trim()).filter(Boolean).concat([n]).join('、'); }
+      else { const d = await rpc('addWarikanMember', [wk.id, n]); renderWarikan(d); }
+      return;
+    }
     if (act === 'addPerson') {
-      const el = $('wkNewMembers'); const cur = el.value.split(/[、,，\s]+/).map(x => x.trim()).filter(Boolean);
+      const el = $('wkNewMembers'); const cur = el.value.split(/[、,，]+/).map(x => x.trim()).filter(Boolean);
       if (cur.indexOf(b.dataset.name) < 0) cur.push(b.dataset.name);
       el.value = cur.join('、'); return;
     }
@@ -1209,7 +1262,6 @@ async function loadSettingsView(){
     const opt = (list, sel) => '<option value="">（選択してください）</option>' + list.map(a => `<option value="${esc(a.勘定科目ID)}"${a.勘定科目ID === sel ? ' selected' : ''}>${esc(a.勘定科目名)}</option>`).join('');
     document.getElementById('lgMe').value = st['割り勘_自分の名前'] || '';
     document.getElementById('lgExp').innerHTML = opt(accs.filter(a => a.分類 === '費用'), st['割り勘_費用科目ID']);
-    document.getElementById('lgRec').innerHTML = opt(accs.filter(a => a.分類 === '資産' || a.分類 === '負債'), st['割り勘_立替金科目ID']);
     document.getElementById('lgPay').innerHTML = opt(accs.filter(a => a.分類 === '資産' || a.分類 === '負債'), st['割り勘_支払元科目ID']);
     loadArchiveStatus();
     // 他アプリ連携
@@ -1290,7 +1342,7 @@ document.getElementById('lgSave').onclick = async () => {
   const m = document.getElementById('lgMsg'); m.textContent = '';
   try {
     await rpc('saveSettings', [{ '割り勘_自分の名前': document.getElementById('lgMe').value.trim(), '割り勘_費用科目ID': document.getElementById('lgExp').value,
-      '割り勘_立替金科目ID': document.getElementById('lgRec').value, '割り勘_支払元科目ID': document.getElementById('lgPay').value }]);
+      '割り勘_支払元科目ID': document.getElementById('lgPay').value }]);
     m.textContent = '保存しました';
   } catch(e) { document.getElementById('stErr').textContent = e.message; }
 };
