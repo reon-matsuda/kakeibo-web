@@ -464,11 +464,15 @@ async function loadSummary(){
     document.getElementById('sumAlerts').innerHTML = (x.alerts || []).map(a =>
       '<div class="line" style="background:#fff8e1;border-color:#ffe082;margin-top:10px;font-size:13px;">⚠️ ' + esc(a.text) + '</div>').join('');
     document.getElementById('breakdown').innerHTML = breakdownHtml(x);
+    if ((x.preStartLoans || []).length) document.getElementById('breakdown').insertAdjacentHTML('beforeend',
+      '<div class="note" style="margin-top:10px;">集計開始月（' + esc(x.startYm) + '）より前に借りたローンの返済は、毎月の固定費と同じく自由費から引いています：' +
+      x.preStartLoans.map(L => esc(L.名称) + '（' + esc(L.借入月) + '借入・今月の返済 ' + yen(L.今月の返済) + '・残り ' + yen(L.残り返済額) + '）').join('、') +
+      '。実際の返済は「借方 借入金（負債）／貸方 銀行」で入力し、費用の科目は使わないでください（自由費から二重に引かれます）。</div>');
     document.getElementById('annualBox').innerHTML = (x.annualItems || []).length ? '<div class="sub" style="margin-top:12px;">年払い固定費の積立</div>' +
       x.annualItems.map(i => '<div class="line"><div class="row" style="justify-content:space-between;"><b>' + esc(i.名称) + '</b><span>' + yen(i.積立残高) + ' ／ ' + yen(i.年額) + '</span></div>' +
         '<div class="sub">次回 ' + i.次回支払月 + '　' + (i.初回は自由費から ? '初回は自由費から払います' : '毎月 ' + yen(i.毎月の積立) + ' 積立') + '</div></div>').join('') : '';
     document.getElementById('historyBox').innerHTML = historyHtml(x);
-    set('sumNote', '今月の予算は先月の総収入から組んでいます（今月入った収入は来月の予算）。1日あたり使える額は、繰越を除いた今月分だけで計算しています。');
+    set('sumNote', '集計開始月 ' + (x.startYm || '') + ' から計算しています。今月の予算は先月の総収入から組んでいます（今月入った収入は来月の予算）。1日あたり使える額は、繰越を除いた今月分だけで計算しています。');
   } catch(e) {
     document.getElementById('sumNote').textContent = 'エラー: ' + e.message;
   }
@@ -505,7 +509,7 @@ const DETAIL = {
     f: x => `予算の元 <b>${yen(x.baseIncome)}</b> × 貯蓄率 ＝ <b>${yen(x.savingFromSalary)}</b>　＋ 今月の賞与 <b>${yen(x.bonusTotal)}</b> ＝ <b>${yen(x.savingTotal)}</b>`,
     w: '貯蓄額のうち投資率の分（' + '投資予定額の「基本」' + '）を投資に回す予定にします。賞与は入った月に全額を貯蓄に入れます。' },
   fixed: { t: '毎月固定費（予定）', v: x => x.fixedMonthlyPlan, h: 'fixedPlan', hl: '固定費の予定', cat: 'fixedMonthly', ym: x => (x.history || []).length > 1 ? x.baseYm : x.yyyymm,
-    f: x => `先月の毎月固定費の実績 ＝ <b>${yen(x.fixedMonthlyPlan)}</b>`,
+    f: x => `先月の毎月固定費の実績 ＝ <b>${yen(x.fixedMonthlyPlan)}</b>` + (x.preLoanRepay ? `　＋ 開始前のローンの返済 <b>${yen(x.preLoanRepay)}</b>（これも自由費から引きます）` : ''),
     w: '家賃などは月末に引き落とされることが多く、月の途中ではまだ現れません。そこで先月の実績を今月の予定として先に引いておきます（集計開始月は今月の実績）。' },
   fixedDiff: { t: '固定費 実績−予定（来月に精算）', v: x => x.fixedDiff, h: 'fixedDiff', hl: '実績−予定', cat: 'fixedMonthly', ym: x => x.yyyymm,
     f: x => `今月の実績 <b>${yen(x.fixedMonthlyActual)}</b> − 予定 <b>${yen(x.fixedMonthlyPlan)}</b> ＝ <b>${signYen(x.fixedDiff)}</b>`,
@@ -670,7 +674,7 @@ function bdRow(sign, label, val, why, strong){
 }
 function breakdownHtml(x){
   const calcInvest = x.investPlannedBase + x.annualAccrual + x.loanBorrow - x.annualPay - x.annualRelease - x.loanRepay;
-  const calcFree = x.baseIncome - x.savingFromSalary - x.fixedMonthlyPlan - x.fixedCarryDiff - x.annualAccrual - x.loanBorrow + x.annualRelease - x.annualFreeCharge;
+  const calcFree = x.baseIncome - x.savingFromSalary - x.fixedMonthlyPlan - x.fixedCarryDiff - (x.preLoanRepay || 0) - x.annualAccrual - x.loanBorrow + x.annualRelease - x.annualFreeCharge;
   const inv =
     bdRow('', '基本（貯蓄額 × 投資率）', x.investPlannedBase,
       `予算の元（${esc(x.baseSource)}）${yen(x.baseIncome)} × 貯蓄率 ＝ 貯蓄額 ${yen(x.savingFromSalary)}。このうち投資率の分を投資に回す予定にします。残りの ${yen(x.cashSaving)} は現金の貯金です。賞与は別枠で全額貯蓄に入るので、ここには含めません。`) +
@@ -697,6 +701,7 @@ function breakdownHtml(x){
     bdRow('−', '貯蓄額（給与分）', x.savingFromSalary, '予算の元 × 貯蓄率。先に取り分けて、使えないお金にします。') +
     bdRow('−', '毎月固定費（予定）', x.fixedMonthlyPlan, '前月の毎月固定費の実績です。月末に払うものがまだ現れていなくても、先に差し引いておきます（初月は今月の実績）。') +
     bdRow(x.fixedCarryDiff < 0 ? '＋' : '−', '先月の固定費の差の精算', Math.abs(x.fixedCarryDiff), '先月の固定費が予定より多かった分は今月の自由費から引き、少なかった分は足します（先月の 実績−予定 ＝ ' + signYen(x.fixedCarryDiff) + '）。') +
+    (x.preLoanRepay ? bdRow('−', '開始前のローンの返済', x.preLoanRepay, '集計開始月より前に借りたローンの今月の返済です。借りたときのお金はこのアプリの計算に入っていないので、毎月の固定費と同じく自由費から払います（投資予定額からは引きません）。') : '') +
     bdRow('−', '年払い積立', x.annualAccrual, '投資予定額の財布へ預ける分です（上の「＋ 年払い積立」と同じ額）。') +
     bdRow('−', 'ローン借入', x.loanBorrow, '一括で払ったとみなして引く分です（上の「＋ ローン借入」と同じ額）。') +
     bdRow('＋', '積立の解放', x.annualRelease, '不要になった積立を戻した分です。') +
