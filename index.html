@@ -49,7 +49,50 @@
   #lsSeg{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
   #lsSeg button{padding:6px 10px;border:1px solid var(--line);border-radius:99px;background:#fff;font-size:12px;color:var(--sub);}
   #lsSeg button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+  /* ---- v1.8：見た目（家計アプリでよくある「白いカード＋大きな金額」の形） ---- */
+  :root{--bg:#f2f4f7;--card:#fff;--ink:#1d2433;--sub:#5f6b7a;--muted:#8a94a3;--accent:#2563c9;--accent-weak:#e8f0fd;--line:#e6e9ee;--plus:#1d64c4;--minus:#c8372d;}
+  body{background:var(--bg);color:var(--ink);padding-bottom:96px;}
+  header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;margin-bottom:12px;}
+  .card{border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.06);}
+  .card.hero{padding:18px 16px;}
+  .sec{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;}
+  .big{font-size:32px;font-weight:800;letter-spacing:.01em;font-variant-numeric:tabular-nums;}
+  .v,.amt{font-variant-numeric:tabular-nums;}
+  button.stat,button.hero-main{display:block;width:100%;text-align:left;border:none;font:inherit;color:inherit;cursor:pointer;}
+  button.stat{background:#f6f7f9;}
+  button.stat:hover,button.stat:focus-visible{background:var(--accent-weak);outline:none;}
+  button.stat .k::after,button.hero-main .sub::after{content:' ›';color:var(--muted);}
+  button.hero-main{background:none;padding:6px 0 4px;margin-top:6px;}
+  button.hero-main .sub{display:block;}
+  .tabbar{height:64px;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -1px 0 var(--line);border-top:none;}
+  .tabbar button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted);padding:8px 0;cursor:pointer;}
+  .tabbar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .tabbar button.active{color:var(--accent);}
+  .fab{position:fixed;right:16px;bottom:80px;z-index:6;border:none;border-radius:99px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;padding:12px 18px;box-shadow:0 4px 12px rgba(37,99,201,.35);cursor:pointer;}
+  .fab.hidden{display:none;}
+  .sheet{position:fixed;inset:0;z-index:20;}
+  .sheet-bg{position:absolute;inset:0;background:rgba(16,24,40,.45);}
+  .sheet-box{position:absolute;left:0;right:0;bottom:0;max-height:86vh;overflow:auto;background:var(--card);border-radius:16px 16px 0 0;padding:16px 16px 28px;}
+  @media (min-width:640px){ .sheet-box{left:50%;width:560px;transform:translateX(-50%);} }
+  .formula{background:#f6f7f9;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.8;margin-top:10px;}
+  .formula b{font-variant-numeric:tabular-nums;}
+  .acc-row{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;padding:12px 2px;border:none;border-bottom:1px solid var(--line);background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;}
+  .acc-row:last-child{border-bottom:none;}
+  .acc-row .nm{font-size:15px;}
+  .acc-row .amt{font-size:16px;font-weight:700;white-space:nowrap;}
+  .grp{font-size:12px;color:var(--sub);margin-top:14px;padding-bottom:4px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;}
+  .bar-row{margin-top:10px;}
+  .bar-row .lab{display:flex;justify-content:space-between;font-size:13px;}
+  .bar-track{height:8px;border-radius:4px;background:#eef1f5;margin-top:4px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;background:var(--accent);}
+  table.hist{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;font-variant-numeric:tabular-nums;}
+  table.hist th,table.hist td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;}
+  table.hist th:first-child,table.hist td:first-child{text-align:left;}
+  table.hist th{color:var(--sub);font-weight:600;}
+  .hist-wrap{overflow-x:auto;}
+  .ent{padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;display:flex;justify-content:space-between;gap:8px;}
 </style>
+
 </head>
 <body>
 <div id="gate" class="card" style="margin-top:40px;">
@@ -63,36 +106,80 @@
 <div id="app" class="hidden">
 <header><h1>家計簿</h1></header>
 
-<!-- 今月の残り -->
-<div id="view-summary" class="card">
-  <div class="row" style="justify-content:space-between;">
-    <strong id="sumYm">今月</strong>
-    <button class="btn small outline" id="sumReload">更新</button>
+<!-- ホーム（今月の残り） -->
+<div id="view-summary">
+  <div class="card hero">
+    <div class="row" style="justify-content:space-between;">
+      <span class="sub" id="sumYm">今月</span>
+      <button class="btn small outline" id="sumReload">更新</button>
+    </div>
+    <button class="hero-main" data-detail="perDay"><span class="sub">1日あたり使える額</span><span class="big" id="perDay">－</span></button>
+    <div class="grid2">
+      <button class="stat" data-detail="freeLeft"><div class="k">自由費残高（繰越込）</div><div class="v" id="freeLeft">－</div></button>
+      <div class="stat"><div class="k">残り日数</div><div class="v" id="remainDays">－</div></div>
+    </div>
+    <div id="sumAlerts"></div>
   </div>
-  <div style="margin-top:12px;">
-    <div class="sub">1日あたり使える額</div>
-    <div class="big" id="perDay">－</div>
+  <div class="card">
+    <div class="sec">今月の予算の元</div>
+    <div class="grid2">
+      <button class="stat" data-detail="baseIncome"><div class="k" id="baseLabel">先月の総収入（今月の予算）</div><div class="v" id="income">－</div></button>
+      <button class="stat" data-detail="monthIncome"><div class="k">今月の収入（来月の予算）</div><div class="v" id="monthIncome">－</div></button>
+      <button class="stat" data-detail="saving"><div class="k">貯蓄額（賞与込）</div><div class="v" id="saving">－</div></button>
+      <button class="stat" data-detail="fixed"><div class="k">毎月固定費（予定）</div><div class="v" id="fixed">－</div></button>
+      <button class="stat" data-detail="fixedDiff"><div class="k">固定費 実績−予定（来月に精算）</div><div class="v" id="fixedDiff">－</div></button>
+      <button class="stat" data-detail="fixedCarry"><div class="k">先月の固定費の差（今月に精算）</div><div class="v" id="fixedCarry">－</div></button>
+    </div>
+    <div class="sec" style="margin-top:14px;">投資</div>
+    <div class="grid2">
+      <button class="stat" data-detail="invest"><div class="k">投資予定額（今月）</div><div class="v" id="invest">－</div></button>
+      <button class="stat" data-detail="investActual"><div class="k">実際の投資額</div><div class="v" id="investActual">－</div></button>
+      <button class="stat" style="grid-column:1/3;" data-detail="investEnd"><div class="k">残投資予定額（繰越込・月末）</div><div class="v" id="investEnd">－</div></button>
+    </div>
+    <div class="note">数字をタップすると、計算の式・元になった伝票・月ごとの推移が見られます。</div>
   </div>
-  <div id="sumAlerts"></div>
-  <div class="grid2">
-    <div class="stat"><div class="k">自由費残高（繰越込）</div><div class="v" id="freeLeft">－</div></div>
-    <div class="stat"><div class="k">残り日数</div><div class="v" id="remainDays">－</div></div>
-    <div class="stat"><div class="k">月収（賞与除く）</div><div class="v" id="income">－</div></div>
-    <div class="stat"><div class="k">貯蓄額（賞与込）</div><div class="v" id="saving">－</div></div>
-    <div class="stat"><div class="k">毎月固定費（予定）</div><div class="v" id="fixed">－</div></div>
-    <div class="stat"><div class="k">固定費 実績−予定</div><div class="v" id="fixedDiff">－</div></div>
-    <div class="stat"><div class="k">投資予定額（今月）</div><div class="v" id="invest">－</div></div>
-    <div class="stat"><div class="k">実際の投資額</div><div class="v" id="investActual">－</div></div>
-    <div class="stat" style="grid-column:1/3;"><div class="k">残投資予定額（繰越込・月末）</div><div class="v" id="investEnd">－</div></div>
+  <div class="card">
+    <div id="breakdown"></div>
+    <div id="annualBox"></div>
+    <div id="historyBox"></div>
+    <div class="note" id="sumNote"></div>
   </div>
-  <div class="sub" style="margin-top:12px;" id="breakdown"></div>
-  <div id="annualBox"></div>
-  <div class="note" id="sumNote"></div>
+</div>
+
+<!-- 口座（v1.8） -->
+<div id="view-accounts" class="hidden">
+  <div class="card hero">
+    <div class="row" style="justify-content:space-between;"><span class="sub">資産総額（資産 − 負債）</span><button class="btn small outline" id="acReload">更新</button></div>
+    <div class="big" id="acNet">－</div>
+    <div class="grid2">
+      <div class="stat"><div class="k">資産</div><div class="v" id="acAssets">－</div></div>
+      <div class="stat"><div class="k">負債</div><div class="v" id="acLiab">－</div></div>
+      <div class="stat" style="grid-column:1/3;"><div class="k">うち投資（投資フラグの付いた資産）</div><div class="v" id="acInvest">－</div></div>
+    </div>
+    <div class="note" id="acAsOf"></div>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;"><div class="sec">口座</div><button class="btn small" id="acNew">＋ 科目を追加</button></div>
+    <div id="acList"></div>
+  </div>
+  <div class="card">
+    <div class="sec">今月の収支</div>
+    <div class="grid2">
+      <div class="stat"><div class="k">収入</div><div class="v plus" id="acInc">－</div></div>
+      <div class="stat"><div class="k">支出</div><div class="v minus" id="acExp">－</div></div>
+    </div>
+    <div class="sub" style="margin-top:12px;">支出の内訳（科目別）</div>
+    <div id="acExpBars"></div>
+  </div>
+  <div class="card">
+    <details><summary>収入・支出の科目</summary><div id="acPL"></div></details>
+  </div>
+  <div id="acErr" class="err" style="margin:0 16px;"></div>
 </div>
 
 <!-- 入力 -->
 <div id="view-input" class="card hidden">
-  <strong>伝票入力</strong>
+  <div class="row" style="justify-content:space-between;"><strong>伝票入力</strong><button class="btn small outline" id="inBack">← 戻る</button></div>
   <label>日付</label>
   <input type="date" id="inDate">
   <label>摘要</label>
@@ -100,7 +187,7 @@
   <label>種別（個別指定・任意）</label>
   <select id="inType">
     <option value="">（科目の既定どおり）</option>
-    <option>給与収入</option><option>その他収入</option><option>毎月固定費</option>
+    <option>給与収入</option><option>副業収入</option><option>その他収入</option><option>毎月固定費</option>
     <option>年払い固定費</option><option>ローン</option><option>変動費</option>
   </select>
   <div id="inLines"></div>
@@ -113,11 +200,19 @@
 
 <!-- 設定（率・年払い固定費・ローン） -->
 <div id="view-settings" class="card hidden">
+  <strong>一覧を見る</strong>
+  <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:8px;">
+    <button class="btn small outline" data-open-list="accounts">勘定科目</button><button class="btn small outline" data-open-list="annual">年払い固定費</button>
+    <button class="btn small outline" data-open-list="loans">ローン</button><button class="btn small outline" data-open-list="people">人・割り勘メンバー</button>
+  </div>
+  <hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">
   <strong>基本設定</strong>
   <div class="row"><div style="flex:1;"><label>貯蓄率（%）</label><input type="number" id="stSave" step="0.1"></div>
   <div style="flex:1;"><label>投資率（%）</label><input type="number" id="stInvest" step="0.1"></div></div>
   <div class="row"><div style="flex:1;"><label>期待利回り（%）</label><input type="number" id="stExp" step="0.1"></div>
   <div style="flex:1;"><label>集計開始月</label><input type="month" id="stStart"></div></div>
+  <label>開始前月の収入（集計開始月の予算の元。先月の手取り合計）</label><input type="number" id="stPre" inputmode="numeric" placeholder="例：300000">
+  <div class="note">今月の予算は先月の総収入から組みます。集計開始月だけは前月の記録が無いので、ここに入れた額を使います。勘定科目の追加・編集は「口座」タブの「＋ 科目を追加」、または各科目をタップして行います。</div>
   <div class="note">期待利回り＝eMAXIS Slim オールカントリーの平均利益率の目安。これを上回る金利のローンには警告を出します。</div>
   <button class="btn small" id="stSaveBtn" style="margin-top:10px;">保存</button>
   <div id="stMsg" class="ok"></div>
@@ -149,7 +244,7 @@
   <label>立替金の科目（資産。「家計反映対象」はオフにしておく）</label><select id="lgRec"></select>
   <label>支払元の口座（普段お金が出る口座）</label><select id="lgPay"></select>
   <div class="row" style="margin-top:8px;"><button class="btn small" id="lgSave">保存</button><span class="ok" id="lgMsg"></span></div>
-  <div class="note">割り勘の支払いを登録すると、自分の立替額と負担額から家計の伝票を1枚つくります。負担額だけが自由費を減らし、他人の分の立替は「立替金」に残ります。実際に精算したら、「入力」で 立替金 ⇔ 銀行 の伝票を入れてください。</div>
+  <div class="note">割り勘の支払いを登録すると、自分の立替額と負担額から家計の伝票を1枚つくります。負担額だけが自由費を減らし、他人の分の立替は「立替金」に残ります。実際に送金したら、割り勘画面の精算プランで「送金済みにする」を押すと、立替金と支払元の口座の伝票を自動で作ります。</div>
 
   <hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">
   <strong>他アプリとの連携</strong>
@@ -217,13 +312,23 @@
 
 </div>
 
-<div class="tabbar" id="tabbar">
-  <button data-tab="summary" class="active">今月の残り</button>
-  <button data-tab="input">入力</button>
-  <button data-tab="warikan">割り勘</button>
-  <button data-tab="lists">一覧</button>
-  <button data-tab="settings">設定</button>
+<!-- 下から出る詳細画面（計算履歴・口座の詳細・科目の編集） -->
+<div id="sheet" class="sheet hidden" aria-hidden="true">
+  <div class="sheet-bg" data-close-sheet="1"></div>
+  <div class="sheet-box" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+    <div class="row" style="justify-content:space-between;"><strong id="shTitle"></strong><button class="btn small outline" data-close-sheet="1">閉じる</button></div>
+    <div id="shBody"></div>
+  </div>
 </div>
+<button id="fab" class="fab" aria-label="伝票を入力">＋ 入力</button>
+<nav class="tabbar" id="tabbar">
+  <button data-tab="summary" class="active"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>ホーム</button>
+  <button data-tab="lists"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>入出金</button>
+  <button data-tab="accounts"><svg viewBox="0 0 24 24"><path d="M3 10l9-6 9 6M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18"/></svg>口座</button>
+  <button data-tab="warikan"><svg viewBox="0 0 24 24"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 3-5 6-5s6 2 6 5M12 20c0-3 2-5 5-5s5 2 5 5"/></svg>割り勘</button>
+  <button data-tab="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/></svg>メニュー</button>
+</nav>
+
 
 <script src="config.js"></script>
 <script>
@@ -274,14 +379,15 @@ async function showApp(){
   if (ME.mode === 'friend') {
     // 友人キー：割り勘の自分のプロジェクトだけを見せる
     document.getElementById('tabbar').classList.add('hidden');
-    ['summary','input','lists','settings'].forEach(t => document.getElementById('view-' + t).classList.add('hidden'));
+    ['summary','input','lists','accounts','settings'].forEach(t => document.getElementById('view-' + t).classList.add('hidden'));
+    document.getElementById('fab').classList.add('hidden');
     document.getElementById('view-warikan').classList.remove('hidden');
     document.querySelector('header h1').textContent = '割り勘';
     loadWarikanProjects();
     return;
   }
   document.getElementById('tabbar').classList.remove('hidden');
-  loadSummary();
+  showView('summary');
 }
 document.getElementById('gateGo').onclick = () => {
   const k = document.getElementById('gateKey').value.trim();
@@ -291,58 +397,283 @@ document.getElementById('gateGo').onclick = () => {
 };
 if (getKey()) { showApp(); }
 
-// ---- タブ ----
+// ---- 画面の切り替え（v1.8） ----
+const VIEWS = ['summary', 'input', 'lists', 'accounts', 'warikan', 'settings'];
+function showView(v, opt){
+  VIEWS.forEach(t => document.getElementById('view-' + t).classList.toggle('hidden', t !== v));
+  document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('active', b.dataset.tab === v));
+  document.getElementById('fab').classList.toggle('hidden', !(v === 'summary' || v === 'lists' || v === 'accounts'));
+  window.scrollTo(0, 0);
+  if (v === 'warikan') loadWarikanProjects();
+  if (v === 'settings') loadSettingsView();
+  if (v === 'lists') { if (!opt || !opt.kind) LS.kind = 'entries'; else LS.kind = opt.kind; openLists(); }
+  if (v === 'accounts') loadAccounts();
+  if (v === 'summary') loadSummary();
+  if (v === 'input') prepareInput();
+}
 document.getElementById('tabbar').addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-tab]');
-  if (!btn) return;
-  document.querySelectorAll('#tabbar button').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  ['summary','input','warikan','lists','settings'].forEach(t => {
-    document.getElementById('view-' + t).classList.toggle('hidden', t !== btn.dataset.tab);
-  });
-  if (btn.dataset.tab === 'warikan') loadWarikanProjects();
-  if (btn.dataset.tab === 'settings') loadSettingsView();
-  if (btn.dataset.tab === 'lists') openLists();
+  if (btn) showView(btn.dataset.tab);
 });
+document.getElementById('fab').onclick = () => showView('input');
+document.getElementById('view-settings').addEventListener('click', e => {
+  const b = e.target.closest('[data-open-list]'); if (b) showView('lists', { kind: b.dataset.openList });
+});
+document.getElementById('inBack').onclick = () => showView('summary');
 
-// ---- 今月の残り ----
+// ---- 下から出る画面 ----
+function openSheet(title, html){
+  document.getElementById('shTitle').textContent = title;
+  document.getElementById('shBody').innerHTML = html;
+  const s = document.getElementById('sheet');
+  s.classList.remove('hidden'); s.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+function closeSheet(){
+  const s = document.getElementById('sheet');
+  s.classList.add('hidden'); s.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+document.getElementById('sheet').addEventListener('click', e => { if (e.target.closest('[data-close-sheet]')) closeSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+// ---- ホーム（今月の残り） ----
 function yen(n){ return (Number(n)||0).toLocaleString() + '円'; }
+function signYen(n){ n = Number(n) || 0; return (n > 0 ? '+' : '') + yen(n); }
+let LAST_SUM = null;
 async function loadSummary(){
   try {
     const x = await rpc('getMonthSummary', []);
+    LAST_SUM = x;
     const set = (id, t) => { document.getElementById(id).textContent = t; };
-    set('sumYm', x.yyyymm);
+    set('sumYm', x.yyyymm.replace('-', '年') + '月');
     set('perDay', x.freeLeftPerDay === null ? '－' : yen(x.freeLeftPerDay));
+    document.getElementById('perDay').classList.toggle('minus', Number(x.freeLeftPerDay) < 0);
     set('freeLeft', yen(x.freeLeftMonth));
     set('remainDays', x.remainingDays + '日');
-    set('income', yen(x.monthlyIncome));
+    set('baseLabel', x.baseSource && x.baseSource.indexOf('先月') === 0 ? '先月の総収入（今月の予算）' : '開始前月の収入（今月の予算）');
+    set('income', yen(x.baseIncome));
+    set('monthIncome', yen(x.monthlyIncome));
     set('saving', yen(x.savingTotal));
     set('fixed', yen(x.fixedMonthlyPlan));
-    set('fixedDiff', (x.fixedDiff > 0 ? '+' : '') + yen(x.fixedDiff));
+    set('fixedDiff', signYen(x.fixedDiff));
+    set('fixedCarry', signYen(x.fixedCarryDiff));
     set('invest', yen(x.investFinal));
     set('investActual', yen(x.investActual));
     set('investEnd', yen(x.investEnd));
     document.getElementById('sumAlerts').innerHTML = (x.alerts || []).map(a =>
-      '<div class="line" style="background:#fff8e1;border-color:#ffe082;margin-top:10px;">⚠️ ' + esc(a.text) + '</div>').join('');
+      '<div class="line" style="background:#fff8e1;border-color:#ffe082;margin-top:10px;font-size:13px;">⚠️ ' + esc(a.text) + '</div>').join('');
     document.getElementById('breakdown').innerHTML = breakdownHtml(x);
     document.getElementById('annualBox').innerHTML = (x.annualItems || []).length ? '<div class="sub" style="margin-top:12px;">年払い固定費の積立</div>' +
       x.annualItems.map(i => '<div class="line"><div class="row" style="justify-content:space-between;"><b>' + esc(i.名称) + '</b><span>' + yen(i.積立残高) + ' ／ ' + yen(i.年額) + '</span></div>' +
         '<div class="sub">次回 ' + i.次回支払月 + '　' + (i.初回は自由費から ? '初回は自由費から払います' : '毎月 ' + yen(i.毎月の積立) + ' 積立') + '</div></div>').join('') : '';
-    set('sumNote', '1日あたり使える額は、繰越を除いた当月収入分だけで計算しています。');
+    document.getElementById('historyBox').innerHTML = historyHtml(x);
+    set('sumNote', '今月の予算は先月の総収入から組んでいます（今月入った収入は来月の予算）。1日あたり使える額は、繰越を除いた今月分だけで計算しています。');
   } catch(e) {
     document.getElementById('sumNote').textContent = 'エラー: ' + e.message;
   }
 }
+document.getElementById('sumReload').onclick = loadSummary;
+
+/** 月ごとの計算履歴（開始月から今月まで。新しい月が上） */
+function historyHtml(x){
+  const h = (x.history || []).slice().reverse();
+  if (!h.length) return '';
+  const ym = s => s.slice(2).replace('-', '/');
+  return `<details class="bdbox"><summary>月ごとの計算履歴（${esc(x.startYm || h[h.length - 1].yyyymm)}〜）</summary>
+    <div class="sub" style="margin-top:6px;">自由費は「月末の残り」が次の月の繰越になります。</div>
+    <div class="hist-wrap"><table class="hist"><thead><tr><th>月</th><th>予算の元</th><th>自由費<br>今月分</th><th>変動費</th><th>自由費<br>月末</th><th>投資予定<br>月末</th></tr></thead><tbody>
+    ${h.map(r => `<tr><td>${ym(r.yyyymm)}</td><td>${yen(r.baseIncome)}</td><td>${yen(r.freeBase)}</td><td>${yen(r.variable)}</td><td class="${r.freeEnd < 0 ? 'minus' : ''}">${yen(r.freeEnd)}</td><td>${yen(r.investEnd)}</td></tr>`).join('')}
+    </tbody></table></div></details>`;
+}
+
+/* 各数字の「なぜ」：式・説明・元の伝票・推移 */
+const DETAIL = {
+  perDay: { t: '1日あたり使える額', v: x => x.freeLeftPerDay, h: 'freeBase', hl: '自由費（今月分）', cat: 'variable', ym: x => x.yyyymm,
+    f: x => `（自由費・今月分 <b>${yen(x.freeBase)}</b> − 今月の変動費 <b>${yen(x.variable)}</b>）÷ 残り <b>${x.remainingDays}日</b> ＝ <b>${yen(x.freeLeftPerDay)}</b>`,
+    w: '前月からの繰越は入れずに、今月の予算だけで割っています。繰越を含めた残りは「自由費残高」です。' },
+  freeLeft: { t: '自由費残高（繰越込）', v: x => x.freeLeftMonth, h: 'freeEnd', hl: '自由費（月末）', cat: 'variable', ym: x => x.yyyymm,
+    f: x => `自由費・今月分 <b>${yen(x.freeBase)}</b> ＋ 前月からの繰越 <b>${yen(x.carryFree)}</b> − 今月の変動費 <b>${yen(x.variable)}</b> ＝ <b>${yen(x.freeLeftMonth)}</b>`,
+    w: '自由費・今月分の内訳は、ホーム下の「自由費の内訳」で1行ずつ見られます。月末の残りは来月に繰り越します。' },
+  baseIncome: { t: '今月の予算の元（先月の総収入）', v: x => x.baseIncome, h: 'baseIncome', hl: '予算の元', cat: 'income', ym: x => x.baseSource.indexOf('先月') === 0 ? x.baseYm : '',
+    f: x => `${esc(x.baseSource)}：給与 ＋ 副業 ＋ その他の収入 ＝ <b>${yen(x.baseIncome)}</b>（賞与は除く）`,
+    w: '今月の予算は、先月に実際に入った収入から組みます。まだ入っていない今月の給料をあてにしないためです。集計開始月だけは「設定」の「開始前月の収入」を使います。' },
+  monthIncome: { t: '今月の収入（来月の予算）', v: x => x.monthlyIncome, h: 'income', hl: '収入', cat: 'income', ym: x => x.yyyymm,
+    f: x => `給与 <b>${yen(x.salaryIncome)}</b> ＋ 副業 <b>${yen(x.sideIncome)}</b> ＋ その他 <b>${yen(x.otherIncome)}</b> ＝ <b>${yen(x.monthlyIncome)}</b>`,
+    w: '今月入った収入は、今月の予算には使わず、来月の予算の元になります。賞与は別枠で全額貯蓄します。' },
+  saving: { t: '貯蓄額（賞与込）', v: x => x.savingTotal, h: 'saving', hl: '貯蓄（給与分）', cat: 'bonus', ym: x => x.yyyymm,
+    f: x => `予算の元 <b>${yen(x.baseIncome)}</b> × 貯蓄率 ＝ <b>${yen(x.savingFromSalary)}</b>　＋ 今月の賞与 <b>${yen(x.bonusTotal)}</b> ＝ <b>${yen(x.savingTotal)}</b>`,
+    w: '貯蓄額のうち投資率の分（' + '投資予定額の「基本」' + '）を投資に回す予定にします。賞与は入った月に全額を貯蓄に入れます。' },
+  fixed: { t: '毎月固定費（予定）', v: x => x.fixedMonthlyPlan, h: 'fixedPlan', hl: '固定費の予定', cat: 'fixedMonthly', ym: x => (x.history || []).length > 1 ? x.baseYm : x.yyyymm,
+    f: x => `先月の毎月固定費の実績 ＝ <b>${yen(x.fixedMonthlyPlan)}</b>`,
+    w: '家賃などは月末に引き落とされることが多く、月の途中ではまだ現れません。そこで先月の実績を今月の予定として先に引いておきます（集計開始月は今月の実績）。' },
+  fixedDiff: { t: '固定費 実績−予定（来月に精算）', v: x => x.fixedDiff, h: 'fixedDiff', hl: '実績−予定', cat: 'fixedMonthly', ym: x => x.yyyymm,
+    f: x => `今月の実績 <b>${yen(x.fixedMonthlyActual)}</b> − 予定 <b>${yen(x.fixedMonthlyPlan)}</b> ＝ <b>${signYen(x.fixedDiff)}</b>`,
+    w: 'この差は来月の自由費で精算します。予定より多く払った分は来月の自由費から引き、少なかった分は足します。月の途中では、まだ引き落とされていない分だけマイナスに見えます。' },
+  fixedCarry: { t: '先月の固定費の差（今月に精算）', v: x => x.fixedCarryDiff, h: 'fixedCarryDiff', hl: '精算した差', cat: 'fixedMonthly', ym: x => x.baseYm,
+    f: x => `先月の（実績 − 予定）＝ <b>${signYen(x.fixedCarryDiff)}</b> → 今月の自由費から <b>${x.fixedCarryDiff >= 0 ? '引く' : '足す'}</b>`,
+    w: '先月、固定費が予定より多かった（＋）なら今月の自由費が減り、少なかった（−）なら増えます。' },
+  invest: { t: '投資予定額（今月）', v: x => x.investFinal, h: 'investFinal', hl: '投資予定額',
+    f: x => `基本 <b>${yen(x.investPlannedBase)}</b> ＋ 年払い積立 <b>${yen(x.annualAccrual)}</b> ＋ ローン借入 <b>${yen(x.loanBorrow)}</b> − 年払いの支払い <b>${yen(x.annualPay)}</b> − 積立の解放 <b>${yen(x.annualRelease)}</b> − ローン返済 <b>${yen(x.loanRepay)}</b> ＝ <b>${yen(x.investFinal)}</b>`,
+    w: '1行ずつの理由は、ホーム下の「投資予定額の内訳」で各行をタップすると読めます。' },
+  investActual: { t: '実際の投資額', v: x => x.investActual, h: 'investActual', hl: '実際の投資', cat: 'invested', ym: x => x.yyyymm,
+    f: x => `投資フラグの付いた科目への借方の合計 ＝ <b>${yen(x.investActual)}</b>`, w: 'NISAなど、投資フラグの付いた科目に入れた額です。' },
+  investEnd: { t: '残投資予定額（繰越込・月末）', v: x => x.investEnd, h: 'investEnd', hl: '残投資予定（月末）', cat: 'invested', ym: x => x.yyyymm,
+    f: x => `投資予定額 <b>${yen(x.investFinal)}</b> ＋ 前月からの繰越 <b>${yen(x.carryInvest)}</b> − 実際の投資 <b>${yen(x.investActual)}</b> ＝ <b>${yen(x.investEnd)}</b>`,
+    w: 'プラスなら、まだ投資できる余地です。マイナスなら、予定より多く投資しています。' }
+};
+async function openDetail(key){
+  const d = DETAIL[key], x = LAST_SUM;
+  if (!d || !x) return;
+  const hist = (x.history || []).slice().reverse().slice(0, 12);
+  const ym = d.ym ? d.ym(x) : '';
+  openSheet(d.t, `<div class="big ${Number(d.v(x)) < 0 ? 'minus' : ''}">${d.v(x) === null ? '－' : yen(d.v(x))}</div>
+    <div class="sub">${esc(x.yyyymm)} の計算</div>
+    <div class="formula">${d.f(x)}</div>
+    <p class="sub" style="line-height:1.7;">${esc(d.w)}</p>
+    ${d.cat ? `<div class="sec" style="margin-top:14px;">元になった伝票${ym ? '（' + esc(ym) + '）' : ''}</div><div id="shEnt" class="sub">${ym ? '読み込み中…' : '集計開始月より前のため、伝票はありません（設定の値を使っています）'}</div>` : ''}
+    <div class="sec" style="margin-top:14px;">月ごとの推移</div>
+    <div class="hist-wrap"><table class="hist"><thead><tr><th>月</th><th>${esc(d.hl)}</th></tr></thead><tbody>
+      ${hist.map(r => `<tr><td>${esc(r.yyyymm)}</td><td>${yen(r[d.h])}</td></tr>`).join('')}</tbody></table></div>`);
+  if (d.cat && ym) {
+    try {
+      const r = await rpc('getSummaryDetail', [ym, d.cat]);
+      const el = document.getElementById('shEnt'); if (!el) return;
+      el.innerHTML = r.items.length ? r.items.map(i => `<div class="ent"><span>${esc(i.date.slice(5))}　${esc(i.memo || '（摘要なし）')}<br><span class="sub">${esc(i.account)}${i.archived ? '（アーカイブ）' : ''}</span></span><b class="amt">${yen(i.amount)}</b></div>`).join('') +
+        `<div class="ent"><b>合計</b><b class="amt">${yen(r.total)}</b></div>` : '該当する伝票はありません';
+    } catch(e) { const el = document.getElementById('shEnt'); if (el) el.textContent = 'エラー: ' + e.message; }
+  }
+}
+document.getElementById('view-summary').addEventListener('click', e => {
+  const b = e.target.closest('[data-detail]'); if (b) openDetail(b.dataset.detail);
+});
+
+// ---- 口座（v1.8） ----
+let AC = null;
+async function loadAccounts(){
+  const err = document.getElementById('acErr'); err.textContent = '';
+  try {
+    AC = await rpc('getAccountBalances', []);
+    const t = AC.totals, set = (id, v) => { document.getElementById(id).textContent = v; };
+    set('acNet', yen(t.net)); set('acAssets', yen(t.assets)); set('acLiab', yen(t.liabilities)); set('acInvest', yen(t.invested));
+    document.getElementById('acNet').classList.toggle('minus', t.net < 0);
+    set('acAsOf', AC.asOf + ' 時点。初期残高と、入力したすべての伝票から計算しています。');
+    const row = a => `<button class="acc-row" data-acc="${esc(a.勘定科目ID)}"><span><span class="nm">${esc(a.勘定科目名)}</span>${a.投資フラグ ? ' <span class="pill">投資</span>' : ''}<br><span class="sub">${a.分類 === '負債' ? '今月 使った ' + yen(a.今月の貸方) + '／返した ' + yen(a.今月の借方) : '今月 入 ' + yen(a.今月の借方) + '／出 ' + yen(a.今月の貸方)}</span></span><span class="amt ${a.残高 < 0 ? 'minus' : ''}">${yen(a.残高)}</span></button>`;
+    const grp = (label, list, total) => list.length ? `<div class="grp"><span>${label}</span><span>${yen(total)}</span></div>` + list.map(row).join('') : '';
+    const A = AC.accounts.filter(a => a.分類 === '資産' && a.勘定科目名 !== '立替金'), R = AC.accounts.filter(a => a.分類 === '資産' && a.勘定科目名 === '立替金');
+    const L = AC.accounts.filter(a => a.分類 === '負債');
+    const sum = l => l.reduce((s, a) => s + a.残高, 0);
+    document.getElementById('acList').innerHTML = (grp('資産', A, sum(A)) + grp('立替金（あとで受け取る分）', R, sum(R)) + grp('負債（カード・借入など）', L, sum(L))) ||
+      '<div class="sub" style="margin-top:8px;">まだ口座がありません。「＋ 科目を追加」で、銀行・現金・カードなどを登録してください。</div>';
+    const inc = AC.monthIncome.reduce((s, a) => s + a.amount, 0), exp = AC.monthExpense.reduce((s, a) => s + a.amount, 0);
+    set('acInc', yen(inc)); set('acExp', yen(exp));
+    const max = AC.monthExpense.length ? AC.monthExpense[0].amount : 0;
+    const top = AC.monthExpense.slice(0, 7), rest = AC.monthExpense.slice(7).reduce((s, a) => s + a.amount, 0);
+    const bars = top.concat(rest ? [{ name: 'その他', amount: rest }] : []);
+    document.getElementById('acExpBars').innerHTML = bars.length ? bars.map(b => `<div class="bar-row" title="${esc(b.name)}：${yen(b.amount)}（${Math.round(b.amount / exp * 100)}%）">
+      <div class="lab"><span>${esc(b.name)}</span><span class="amt">${yen(b.amount)} <span class="sub">${Math.round(b.amount / exp * 100)}%</span></span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(2, Math.round(b.amount / Math.max(max, rest) * 100))}%"></div></div></div>`).join('')
+      : '<div class="sub" style="margin-top:6px;">今月の支出はまだありません</div>';
+    const pl = AC.accounts.filter(a => a.分類 === '収益' || a.分類 === '費用' || a.分類 === '純資産');
+    document.getElementById('acPL').innerHTML = pl.map(a => `<button class="acc-row" data-acc="${esc(a.勘定科目ID)}"><span><span class="nm">${esc(a.勘定科目名)}</span><br><span class="sub">${esc(a.分類)}${a.種別 ? '・' + esc(a.種別) : ''}${a.家計反映対象 ? '' : '・家計に数えない'}</span></span><span class="amt">${yen(a.分類 === '費用' ? a.今月の借方 - a.今月の貸方 : a.今月の貸方 - a.今月の借方)}<br><span class="sub">今月</span></span></button>`).join('') || '<div class="sub">まだありません</div>';
+  } catch(e) { err.textContent = e.message; }
+}
+document.getElementById('acReload').onclick = loadAccounts;
+document.getElementById('acNew').onclick = () => openAccountForm(null);
+document.getElementById('view-accounts').addEventListener('click', e => {
+  const b = e.target.closest('[data-acc]'); if (b) openAccountSheet(b.dataset.acc);
+});
+async function openAccountSheet(id){
+  const a = AC && AC.accounts.find(x => x.勘定科目ID === id);
+  if (!a) return;
+  const canAdjust = a.分類 === '資産' || a.分類 === '負債';
+  openSheet(a.勘定科目名, `<div class="sub">${esc(a.分類)}${a.種別 ? '・' + esc(a.種別) : ''}　初期残高 ${yen(a.初期残高)}</div>
+    <div class="big ${a.残高 < 0 ? 'minus' : ''}">${yen(a.残高)}</div>
+    ${canAdjust ? `<details style="margin-top:8px;"><summary>残高を実際の額に合わせる</summary>
+      <div class="sub" style="margin-top:6px;">通帳やアプリの残高を入れると、差額を「残高調整」の伝票で入れます。家計（自由費など）の数字は変わりません。</div>
+      <div class="row" style="margin-top:6px;"><input type="number" id="adjAmt" placeholder="実際の残高（円）" inputmode="numeric" style="flex:2;"><button class="btn small" id="adjGo" data-id="${esc(a.勘定科目ID)}">合わせる</button></div>
+      <div id="adjMsg" class="ok"></div></details>` : ''}
+    <div class="row" style="margin-top:10px;"><button class="btn small outline" id="accEdit" data-id="${esc(a.勘定科目ID)}">科目を編集</button></div>
+    <div class="sec" style="margin-top:14px;">最近の入出金</div><div id="accEnt" class="sub">読み込み中…</div>`);
+  try {
+    const r = await rpc('getEntries', [{ accountId: id, limit: 30 }]);
+    const el = document.getElementById('accEnt'); if (!el) return;
+    el.innerHTML = r.items.map(e => {
+      const mine = e.lines.filter(l => l.accountId === id);
+      const sign = mine.reduce((s, l) => s + ((l.side === '借方') === (a.分類 === '資産' || a.分類 === '費用') ? l.amount : -l.amount), 0);
+      return `<div class="ent"><span>${esc(e.date.slice(5))}　${esc(e.memo || '（摘要なし）')}<br><span class="sub">${esc(e.lines.filter(l => l.accountId !== id).map(l => l.account).join('・'))}</span></span><b class="amt ${sign < 0 ? 'minus' : 'plus'}">${signYen(sign)}</b></div>`;
+    }).join('') + (r.total > r.items.length ? `<div class="sub" style="margin-top:6px;">ほか ${r.total - r.items.length}件（「入出金」で検索できます）</div>` : '') || 'まだありません';
+  } catch(e) { const el = document.getElementById('accEnt'); if (el) el.textContent = 'エラー: ' + e.message; }
+}
+document.getElementById('sheet').addEventListener('click', async e => {
+  const t = e.target;
+  if (t.id === 'accEdit') { const a = AC.accounts.find(x => x.勘定科目ID === t.dataset.id); openAccountForm(a); return; }
+  if (t.id === 'adjGo') {
+    const v = document.getElementById('adjAmt').value, msg = document.getElementById('adjMsg');
+    if (v === '') { msg.className = 'err'; msg.textContent = '実際の残高を入れてください'; return; }
+    try {
+      const r = await rpc('adjustBalance', [t.dataset.id, Number(v)]);
+      msg.className = 'ok'; msg.textContent = r.diff ? '差額 ' + signYen(r.diff) + ' を調整しました' : '残高は合っていました（調整なし）';
+      await loadAccounts();
+    } catch(err) { msg.className = 'err'; msg.textContent = err.message; }
+    return;
+  }
+  if (t.id === 'afSave' || t.id === 'afDel') {
+    const msg = document.getElementById('afMsg'); msg.textContent = '';
+    try {
+      if (t.id === 'afDel') {
+        if (!confirm('この科目を削除しますか？')) return;
+        await rpc('deleteAccount', [t.dataset.id]);
+      } else {
+        await rpc('saveAccount', [{ 勘定科目ID: t.dataset.id || '', 勘定科目名: document.getElementById('afName').value.trim(),
+          分類: document.getElementById('afCls').value, 種別: document.getElementById('afType').value, 事業区分: document.getElementById('afSeg').value,
+          初期残高: document.getElementById('afInit').value === '' ? 0 : Number(document.getElementById('afInit').value),
+          家計反映対象: document.getElementById('afHH').checked, 投資フラグ: document.getElementById('afInv').checked }]);
+      }
+      accountsCache = null; LS.masters = null;
+      closeSheet();
+      if (!document.getElementById('view-accounts').classList.contains('hidden')) loadAccounts();
+      if (!document.getElementById('view-lists').classList.contains('hidden')) refreshLists(true);
+    } catch(err) { msg.textContent = err.message; }
+  }
+});
+document.getElementById('sheet').addEventListener('change', e => {
+  if (e.target.id !== 'afCls') return;
+  const c = e.target.value, pl = c === '収益' || c === '費用';
+  document.getElementById('afTypeBox').classList.toggle('hidden', !pl);
+  document.getElementById('afInvBox').classList.toggle('hidden', c !== '資産');
+  document.getElementById('afInitBox').classList.toggle('hidden', pl);
+  document.getElementById('afHH').checked = pl;       // 収益・費用は家計に数える／口座は数えない が基本
+  if (!pl) document.getElementById('afType').value = '';
+});
+function openAccountForm(a){
+  const v = a || { 勘定科目名: '', 分類: '資産', 種別: '', 事業区分: '家計', 初期残高: 0, 家計反映対象: false, 投資フラグ: false };
+  const pl = v.分類 === '収益' || v.分類 === '費用';
+  const opt = (list, sel) => list.map(o => `<option value="${esc(o[0])}"${o[0] === sel ? ' selected' : ''}>${esc(o[1])}</option>`).join('');
+  openSheet(a ? '科目を編集' : '科目を追加', `
+    <label>科目名</label><input id="afName" value="${esc(v.勘定科目名)}" placeholder="例：〇〇銀行、現金、食費">
+    <label>分類</label><select id="afCls">${opt([['資産', '資産（銀行・現金・電子マネー・投資・立替金）'], ['負債', '負債（クレジットカード・借入）'], ['収益', '収益（給与・副業などの収入）'], ['費用', '費用（食費・家賃などの支出）'], ['純資産', '純資産（残高調整など）']], v.分類)}</select>
+    <div id="afTypeBox" class="${pl ? '' : 'hidden'}"><label>種別（今月の残りのどこに数えるか）</label><select id="afType">${opt([['', '（なし＝費用なら変動費）'], ['給与収入', '給与収入'], ['副業収入', '副業収入'], ['その他収入', 'その他収入'], ['毎月固定費', '毎月固定費'], ['年払い固定費', '年払い固定費'], ['ローン', 'ローン（購入）'], ['変動費', '変動費']], v.種別)}</select></div>
+    <label>事業区分</label><select id="afSeg">${opt([['家計', '家計'], ['副業', '副業'], ['共通', '共通']], v.事業区分 || '家計')}</select>
+    <div id="afInitBox" class="${pl ? 'hidden' : ''}"><label>初期残高（使い始めの日の残高。カードは使った額をプラスで）</label><input id="afInit" type="number" inputmode="numeric" value="${Number(v.初期残高) || 0}"></div>
+    <label class="opt" style="margin-top:12px;"><input type="checkbox" class="chk" id="afHH"${v.家計反映対象 ? ' checked' : ''}>家計（今月の残り）に数える</label>
+    <div class="note" style="margin-top:4px;">収入・支出の科目はオン、銀行・現金・カード・立替金はオフにします。</div>
+    <div id="afInvBox" class="${v.分類 === '資産' ? '' : 'hidden'}"><label class="opt" style="margin-top:10px;"><input type="checkbox" class="chk" id="afInv"${v.投資フラグ ? ' checked' : ''}>投資先（NISAなど。ここへの入金を「実際の投資額」に数える）</label></div>
+    <div class="row" style="margin-top:14px;"><button class="btn" id="afSave" data-id="${esc(a ? a.勘定科目ID : '')}">保存</button>${a ? `<button class="btn outline" id="afDel" data-id="${esc(a.勘定科目ID)}">削除</button>` : ''}</div>
+    <div id="afMsg" class="err"></div>
+    ${a ? '<div class="note">伝票で使った科目は、残高や履歴が合わなくなるので削除できません。名前や設定の変更はいつでもできます。</div>' : ''}`);
+}
+
 // ---- 内訳（v1.7）：各行をタップすると、なぜその計算になるかの説明が開く ----
 function bdRow(sign, label, val, why, strong){
   return `<details class="bd${strong ? ' bd-total' : ''}"><summary><span><i>${sign}</i>${label}</span><b>${yen(val)}</b></summary><div class="why">${why}</div></details>`;
 }
 function breakdownHtml(x){
   const calcInvest = x.investPlannedBase + x.annualAccrual + x.loanBorrow - x.annualPay - x.annualRelease - x.loanRepay;
-  const calcFree = x.monthlyIncome - x.savingFromSalary - x.fixedMonthlyPlan - x.annualAccrual - x.loanBorrow + x.annualRelease - x.annualFreeCharge;
+  const calcFree = x.baseIncome - x.savingFromSalary - x.fixedMonthlyPlan - x.fixedCarryDiff - x.annualAccrual - x.loanBorrow + x.annualRelease - x.annualFreeCharge;
   const inv =
     bdRow('', '基本（貯蓄額 × 投資率）', x.investPlannedBase,
-      `月収 ${yen(x.monthlyIncome)} × 貯蓄率 ＝ 貯蓄額 ${yen(x.savingFromSalary)}。このうち投資率の分を投資に回す予定にします。残りの ${yen(x.cashSaving)} は現金の貯金です。賞与は別枠で全額貯蓄に入るので、ここには含めません。`) +
+      `予算の元（${esc(x.baseSource)}）${yen(x.baseIncome)} × 貯蓄率 ＝ 貯蓄額 ${yen(x.savingFromSalary)}。このうち投資率の分を投資に回す予定にします。残りの ${yen(x.cashSaving)} は現金の貯金です。賞与は別枠で全額貯蓄に入るので、ここには含めません。`) +
     bdRow('＋', '年払い積立', x.annualAccrual,
       '年払いの固定費は、払う月に大金が出ます。そこで毎月少しずつ自由費から取り分け、払う月まで投資予定額の財布で預かります（自由費は同じ額だけ減ります）。') +
     bdRow('＋', 'ローン借入', x.loanBorrow,
@@ -362,9 +693,10 @@ function breakdownHtml(x){
     bdRow('＝', '残投資予定額（月末）', x.investEnd,
       'まだ投資していない予定額です。プラスなら投資できる余地、マイナスなら予定より多く投資しています。', true);
   const free =
-    bdRow('', '月収（賞与除く）', x.monthlyIncome, '給与収入と副業収入の合計です。賞与は全額貯蓄に回すので含めません。') +
-    bdRow('−', '貯蓄額（給与分）', x.savingFromSalary, '月収 × 貯蓄率。先に取り分けて、使えないお金にします。') +
+    bdRow('', '予算の元（先月の総収入）', x.baseIncome, `${esc(x.baseSource)}です。給与・副業・その他の収入の合計で、賞与は全額貯蓄に回すので含めません。今月入った収入は来月の予算になります。`) +
+    bdRow('−', '貯蓄額（給与分）', x.savingFromSalary, '予算の元 × 貯蓄率。先に取り分けて、使えないお金にします。') +
     bdRow('−', '毎月固定費（予定）', x.fixedMonthlyPlan, '前月の毎月固定費の実績です。月末に払うものがまだ現れていなくても、先に差し引いておきます（初月は今月の実績）。') +
+    bdRow(x.fixedCarryDiff < 0 ? '＋' : '−', '先月の固定費の差の精算', Math.abs(x.fixedCarryDiff), '先月の固定費が予定より多かった分は今月の自由費から引き、少なかった分は足します（先月の 実績−予定 ＝ ' + signYen(x.fixedCarryDiff) + '）。') +
     bdRow('−', '年払い積立', x.annualAccrual, '投資予定額の財布へ預ける分です（上の「＋ 年払い積立」と同じ額）。') +
     bdRow('−', 'ローン借入', x.loanBorrow, '一括で払ったとみなして引く分です（上の「＋ ローン借入」と同じ額）。') +
     bdRow('＋', '積立の解放', x.annualRelease, '不要になった積立を戻した分です。') +
@@ -432,7 +764,7 @@ function renderListsBody(){
   const M = LS.masters, terms = qTerms(document.getElementById('lsQ').value);
   let rows = [];
   if (LS.kind === 'accounts') {
-    rows = M.accounts.filter(a => qHit(terms, [a.勘定科目名, a.分類, a.種別, a.事業区分, a.投資フラグ === true || String(a.投資フラグ).toUpperCase() === 'TRUE' ? '投資' : ''])).map(a => `<div class="line">
+    rows = M.accounts.filter(a => qHit(terms, [a.勘定科目名, a.分類, a.種別, a.事業区分, a.投資フラグ === true || String(a.投資フラグ).toUpperCase() === 'TRUE' ? '投資' : ''])).map(a => `<div class="line" data-macc="${esc(a.勘定科目ID)}" style="cursor:pointer;">
       <div class="row" style="justify-content:space-between;"><b>${esc(a.勘定科目名)}</b><span>${a.分類 ? '<span class="pill">' + esc(a.分類) + '</span>' : ''} ${a.種別 ? '<span class="pill">' + esc(a.種別) + '</span>' : ''}</span></div>
       <div class="sub">事業区分 ${esc(a.事業区分 || '－')}／初期残高 ${yen(a.初期残高)}／家計反映 ${yesNo(a.家計反映対象)}／投資 ${yesNo(a.投資フラグ)}</div></div>`);
   } else if (LS.kind === 'annual') {
@@ -454,7 +786,7 @@ function renderListsBody(){
         <div class="sub">${p.projects.length ? '割り勘：' + p.projects.map(x => esc(x.name) + (x.status === '精算済み' ? '（精算済み）' : '')).join('、') : '割り勘のプロジェクトには未参加'}</div></div>`);
   }
   const all = { accounts: M.accounts, annual: M.annual, loans: M.loans }[LS.kind];
-  cnt.textContent = rows.length + '件' + (all && terms.length ? '（全' + all.length + '件中）' : '') + '　※追加・変更は「設定」タブで行います';
+  cnt.textContent = rows.length + '件' + (all && terms.length ? '（全' + all.length + '件中）' : '') + (LS.kind === 'accounts' ? '　※タップで編集・「口座」タブで追加' : '　※追加・変更は「メニュー」で行います');
   body.innerHTML = rows.join('') || '<div class="sub" style="margin-top:8px;">該当するものはありません</div>';
 }
 document.getElementById('lsSeg').addEventListener('click', e => {
@@ -468,9 +800,15 @@ document.getElementById('lsQ').addEventListener('input', () => {
 });
 ['lsFrom', 'lsTo', 'lsArch'].forEach(id => document.getElementById(id).addEventListener('change', () => refreshLists(true)));
 document.getElementById('lsMore').onclick = () => refreshLists(false);
+document.getElementById('lsBody').addEventListener('click', e => {
+  const r = e.target.closest('[data-macc]'); if (!r || !LS.masters) return;
+  const a = LS.masters.accounts.find(x => String(x.勘定科目ID) === r.dataset.macc); if (!a) return;
+  const tb = v => v === true || String(v).toUpperCase() === 'TRUE';
+  openAccountForm(Object.assign({}, a, { 家計反映対象: tb(a.家計反映対象), 投資フラグ: tb(a.投資フラグ) }));
+});
 
-function esc(t){ return String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-document.getElementById('sumReload').onclick = loadSummary;
+function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function localToday(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 
 // ---- 入力 ----
 let accountsCache = null;
@@ -501,7 +839,8 @@ async function addLine(){
   const row = wrap.lastElementChild;
   const accs = await ensureAccounts();
   const sel = row.querySelector('.ln-account');
-  sel.innerHTML = accs.map(a => `<option value="${a.勘定科目ID}">${a.勘定科目名}</option>`).join('');
+  sel.innerHTML = accs.map(a => `<option value="${esc(a.勘定科目ID)}">${esc(a.勘定科目名)}</option>`).join('');
+  if (idx === 1) row.querySelector('.ln-side').value = '貸方';
   row.querySelectorAll('input,select').forEach(el => el.addEventListener('input', checkBalance));
   checkBalance();
 }
@@ -538,14 +877,22 @@ document.getElementById('inSubmit').onclick = async () => {
     okEl.textContent = '登録しました（伝票ID: ' + result.伝票ID + '）';
     document.getElementById('inMemo').value = '';
     document.getElementById('inLines').innerHTML = '';
-    addLine();
+    await addLine(); await addLine();
     loadSummary();
   } catch(e) {
     errEl.textContent = e.message;
   }
 };
-if (!document.getElementById('inDate').value) document.getElementById('inDate').value = new Date().toISOString().slice(0,10);
-addLine();
+async function prepareInput(){
+  if (!document.getElementById('inDate').value) document.getElementById('inDate').value = localToday();
+  const accs = await ensureAccounts();
+  document.querySelectorAll('#inLines .ln-account').forEach(sel => {      // 科目を追加・変更したあとも選べるように作り直す
+    const v = sel.value;
+    sel.innerHTML = accs.map(a => `<option value="${esc(a.勘定科目ID)}">${esc(a.勘定科目名)}</option>`).join('');
+    if (v) sel.value = v;
+  });
+  if (!document.querySelectorAll('#inLines .line').length) { await addLine(); await addLine(); }
+}
 
 // ---- 割り勘 ----
 const wk = { id: '', detail: null, equal: [], equalKey: '', seq: 0, timer: null, clientId: '' };
@@ -637,7 +984,7 @@ function renderPaymentForm(d, done){
   $('wkForm').innerHTML = `
     <hr style="border:0;border-top:1px solid var(--line);margin:16px 0;">
     <strong>支払いを登録</strong>
-    <div class="row"><div style="flex:1;"><label>日付</label><input type="date" id="wfDate" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div class="row"><div style="flex:1;"><label>日付</label><input type="date" id="wfDate" value="${localToday()}"></div>
     <div style="flex:1;"><label>総額（円）</label><input type="number" id="wfTotal" inputmode="numeric" min="1" step="1"></div></div>
     <label>内容</label><input id="wfMemo" placeholder="例：レンタカー">
 
@@ -832,6 +1179,7 @@ async function loadSettingsView(){
     document.getElementById('stInvest').value = +(st.投資率 * 100).toFixed(2);
     document.getElementById('stExp').value = +(st.期待利回り * 100).toFixed(2);
     document.getElementById('stStart').value = st.集計開始月 || '';
+    document.getElementById('stPre').value = st.開始前月の収入 === '' || st.開始前月の収入 === undefined ? '' : st.開始前月の収入;
     const accs = await ensureAccounts();
     document.getElementById('anAcc').innerHTML = accs.filter(a => a.分類 === '費用').map(a => `<option value="${a.勘定科目ID}">${esc(a.勘定科目名)}</option>`).join('');
     const ann = await rpc('getAnnualFixed', []);
@@ -879,7 +1227,8 @@ document.getElementById('stSaveBtn').onclick = async () => {
       貯蓄率: Number(document.getElementById('stSave').value) / 100,
       投資率: Number(document.getElementById('stInvest').value) / 100,
       期待利回り: Number(document.getElementById('stExp').value) / 100,
-      集計開始月: document.getElementById('stStart').value
+      集計開始月: document.getElementById('stStart').value,
+      開始前月の収入: document.getElementById('stPre').value === '' ? '' : Number(document.getElementById('stPre').value)
     }]);
     msg.textContent = '保存しました'; loadSummary();
   } catch(e) { document.getElementById('stErr').textContent = e.message; }
