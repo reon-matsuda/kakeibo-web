@@ -174,29 +174,28 @@
   <div class="card">
     <details><summary>収入・支出の科目</summary><div id="acPL"></div></details>
   </div>
-  <div class="card">
-    <div class="sec">標準の科目をまとめて追加</div>
-    <div class="sub">旧アプリ（家計＆副業 統合会計データベース）と同じ構成の科目のうち、まだ無いものを追加します。同じ名前の科目はそのままです。</div>
-    <button class="btn small outline" id="acSeed" style="margin-top:8px;">追加される科目を確認</button>
-  </div>
   <div id="acErr" class="err" style="margin:0 16px;"></div>
 </div>
 
 <!-- 入力 -->
 <div id="view-input" class="card hidden">
-  <div class="row" style="justify-content:space-between;"><strong>伝票入力</strong><button class="btn small outline" id="inBack">← 戻る</button></div>
+  <div class="row" style="justify-content:space-between;"><strong id="inTitle">伝票入力</strong><button class="btn small outline" id="inBack">← 戻る</button></div>
+  <div id="inEditNote" class="note hidden" style="margin-top:4px;"></div>
   <label>日付</label>
   <input type="date" id="inDate">
   <label>摘要</label>
   <input type="text" id="inMemo" placeholder="例：スーパーで食材">
-  <label>種別（個別指定・任意）</label>
-  <select id="inType">
-    <option value="">（科目の既定どおり）</option>
-    <option>給与収入</option><option>副業収入</option><option>その他収入</option><option>毎月固定費</option>
-    <option>年払い固定費</option><option>ローン</option><option>変動費</option>
-  </select>
   <div id="inLines"></div>
   <button class="btn outline small" id="inAddLine" style="margin-top:10px;">＋ 明細を追加</button>
+  <label>種別（ふだんは科目から自動で入ります。必要なときは選び直せます）</label>
+  <select id="inType">
+    <option value="">（選んでください）</option>
+    <option>給与収入</option><option>副業収入</option><option>その他収入</option><option>毎月固定費</option>
+    <option>年払い固定費</option><option>ローン</option><option>変動費</option>
+    <option value="科目ごと">科目ごと（種別の違う科目が混ざっている）</option>
+    <option value="振替">振替（収入・支出なし。口座どうしの移動など）</option>
+  </select>
+  <div class="row" style="margin-top:4px;justify-content:space-between;"><span id="inTypeNote" class="note" style="margin:0;"></span><button type="button" class="btn small outline hidden" id="inTypeAuto">↺ 自動に戻す</button></div>
   <div id="inCheck" class="sub" style="margin-top:8px;"></div>
   <div id="inErr" class="err"></div>
   <div id="inOk" class="ok"></div>
@@ -423,7 +422,7 @@ document.getElementById('fab').onclick = () => showView('input');
 document.getElementById('view-settings').addEventListener('click', e => {
   const b = e.target.closest('[data-open-list]'); if (b) showView('lists', { kind: b.dataset.openList });
 });
-document.getElementById('inBack').onclick = () => showView('summary');
+document.getElementById('inBack').onclick = () => { const wasEdit = !!EDIT; endEdit(); showView(wasEdit ? 'lists' : 'summary'); };
 
 // ---- 下から出る画面 ----
 function openSheet(title, html){
@@ -574,7 +573,7 @@ async function loadAccounts(){
     const gnames = order.filter(g => bs.some(a => a.グループ === g)).concat(Array.from(new Set(bs.map(a => a.グループ))).filter(g => order.indexOf(g) < 0));
     document.getElementById('acList').innerHTML = gnames.map(g => { const l = bs.filter(a => a.グループ === g);
       return grp(esc(g) + (l[0].分類 === '負債' ? '（負債）' : ''), l, sum(l), g === '貸し借り（人）' ? 'プラス＝貸している額（受け取る分）、マイナス＝借りている額（払う分）' : ''); }).join('') ||
-      '<div class="sub" style="margin-top:8px;">まだ口座がありません。下の「標準の科目をまとめて追加」か「＋ 科目を追加」で登録してください。</div>';
+      '<div class="sub" style="margin-top:8px;">まだ口座がありません。「＋ 科目を追加」で登録してください。</div>';
     const inc = AC.monthIncome.reduce((s, a) => s + a.amount, 0), exp = AC.monthExpense.reduce((s, a) => s + a.amount, 0);
     set('acInc', yen(inc)); set('acExp', yen(exp));
     const max = AC.monthExpense.length ? AC.monthExpense[0].amount : 0;
@@ -590,18 +589,6 @@ async function loadAccounts(){
 }
 document.getElementById('acReload').onclick = loadAccounts;
 document.getElementById('acNew').onclick = () => openAccountForm(null);
-document.getElementById('acSeed').onclick = async () => {
-  try {
-    const r = await rpc('seedStandardAccounts', [true]);
-    const by = {};
-    r.added.forEach(a => { const k = a.グループ || a.分類; (by[k] = by[k] || []).push(a); });
-    openSheet('標準の科目をまとめて追加', r.added.length ? `<div class="sub">${r.added.length}件を追加します（同じ名前の ${r.skipped.length}件はそのまま）。</div>` +
-      Object.keys(by).map(k => `<div class="grp"><span>${esc(k)}</span><span>${by[k].length}件</span></div><div class="sub" style="line-height:1.8;">${by[k].map(a => esc(a.勘定科目名) + (a.初期残高 ? '（初期残高 ' + yen(a.初期残高) + '）' : '')).join('、')}</div>`).join('') +
-      `<div class="note">初期残高は旧アプリの画面に出ていた残高です。ほかの口座は0円で入るので、「口座」タブで各口座をタップし「残高を実際の額に合わせる」で今の残高にしてください。</div>
-       <div class="row" style="margin-top:12px;"><button class="btn" id="acSeedGo">追加する</button></div><div id="acSeedMsg" class="err"></div>`
-      : '<div class="sub">追加する科目はありません（すべてそろっています）。</div>');
-  } catch(e) { document.getElementById('acErr').textContent = e.message; }
-};
 document.getElementById('view-accounts').addEventListener('click', e => {
   const b = e.target.closest('[data-acc]'); if (b) openAccountSheet(b.dataset.acc);
 });
@@ -629,12 +616,6 @@ async function openAccountSheet(id){
 }
 document.getElementById('sheet').addEventListener('click', async e => {
   const t = e.target;
-  if (t.id === 'acSeedGo') {
-    try { const r = await rpc('seedStandardAccounts', [false]); accountsCache = null; LS.masters = null; closeSheet(); await loadAccounts();
-      document.getElementById('acErr').className = 'ok'; document.getElementById('acErr').textContent = r.added.length + '件の科目を追加しました'; }
-    catch(err) { document.getElementById('acSeedMsg').textContent = err.message; }
-    return;
-  }
   if (t.id === 'accEdit') { const a = AC.accounts.find(x => x.勘定科目ID === t.dataset.id); openAccountForm(a); return; }
   if (t.id === 'adjGo') {
     const v = document.getElementById('adjAmt').value, msg = document.getElementById('adjMsg');
@@ -790,13 +771,15 @@ async function refreshLists(reset){
   } catch(e) { if (my === LS.seq) err.textContent = e.message; }
 }
 function renderListsBody(){
+  const old = document.getElementById('lsDone'); if (old) old.remove();
+  if (LS.flash) { document.getElementById('lsCount').insertAdjacentHTML('afterend', '<div class="ok" id="lsDone">' + esc(LS.flash) + '</div>'); LS.flash = ''; }
   const body = document.getElementById('lsBody'), cnt = document.getElementById('lsCount'), more = document.getElementById('lsMore');
   more.classList.add('hidden');
   if (LS.kind === 'entries') {
     cnt.textContent = LS.total + '件' + (LS.total > LS.items.length ? '（新しい順に ' + LS.items.length + '件を表示）' : '');
     more.classList.toggle('hidden', LS.total <= LS.items.length);
-    body.innerHTML = LS.items.map(e => `<div class="line">
-      <div class="row" style="justify-content:space-between;"><span><b>${esc(e.date)}</b>${e.type ? ' <span class="pill">' + esc(e.type) + '</span>' : ''}${e.archived ? ' <span class="pill done">アーカイブ</span>' : ''}</span><b>${yen(e.total)}</b></div>
+    body.innerHTML = LS.items.map((e, i) => `<div class="line ent-row" data-ent="${i}" role="button" tabindex="0" style="cursor:pointer;">
+      <div class="row" style="justify-content:space-between;"><span><b>${esc(e.date)}</b>${e.type ? ' <span class="pill">' + esc(e.type) + '</span>' : ''}${e.warikan ? ' <span class="pill">割り勘</span>' : ''}${e.archived ? ' <span class="pill done">アーカイブ</span>' : ''}</span><b>${yen(e.total)} <span class="sub">›</span></b></div>
       <div style="margin-top:2px;">${esc(e.memo || '（摘要なし）')}</div>
       <div class="sub">${e.lines.map(l => `${l.side === '借方' ? '借' : '貸'} ${esc(l.account)} ${yen(l.amount)}${l.segment && l.segment !== '家計' ? '（' + esc(l.segment) + '）' : ''}${l.bonus ? '［賞与］' : ''}`).join('　／　')}</div>
     </div>`).join('') || '<div class="sub" style="margin-top:8px;">該当する伝票はありません</div>';
@@ -841,7 +824,29 @@ document.getElementById('lsQ').addEventListener('input', () => {
 });
 ['lsFrom', 'lsTo', 'lsArch'].forEach(id => document.getElementById(id).addEventListener('change', () => refreshLists(true)));
 document.getElementById('lsMore').onclick = () => refreshLists(false);
+function openEntrySheet(e){
+  const can = !e.warikan && !e.archived;
+  openSheet('伝票', `<div class="sub">${esc(e.date)}${e.type ? '　' + esc(e.type) : ''}</div>
+    <div style="font-size:16px;margin-top:4px;">${esc(e.memo || '（摘要なし）')}</div>
+    <div class="big">${yen(e.total)}</div>
+    ${e.lines.map(l => `<div class="ent"><span>${l.side}　${esc(l.account)}${l.segment && l.segment !== '家計' ? '（' + esc(l.segment) + '）' : ''}${l.bonus ? '［賞与］' : ''}</span><b class="amt">${yen(l.amount)}</b></div>`).join('')}
+    ${can ? `<div class="row" style="margin-top:14px;"><button class="btn" id="entEdit">編集</button><button class="btn outline" id="entDel" style="color:var(--minus);border-color:var(--minus);">削除</button></div><div id="entMsg" class="err"></div>`
+      : `<div class="note" style="margin-top:12px;">${e.warikan ? '割り勘から作った伝票です。直すときは「割り勘」タブの支払い履歴で「取り消す」から登録し直してください（人の口座とずれないように）。' : 'アーカイブ済みの伝票です。直すときは、メニューの「アーカイブを元に戻す」で戻してください。'}</div>`}`);
+  OPEN_ENT = e;
+}
+let OPEN_ENT = null;
+document.getElementById('sheet').addEventListener('click', async ev => {
+  if (!OPEN_ENT) return;
+  if (ev.target.id === 'entEdit') { const e = OPEN_ENT; closeSheet(); OPEN_ENT = null; startEdit(e); return; }
+  if (ev.target.id === 'entDel') {
+    if (!confirm('この伝票を削除しますか？（元に戻せません）')) return;
+    try { await rpc('deleteEntry', [OPEN_ENT.id]); OPEN_ENT = null; closeSheet(); loadSummary(); LS.flash = '伝票を削除しました'; await refreshLists(true); }
+    catch(err) { document.getElementById('entMsg').textContent = err.message; }
+  }
+});
+document.getElementById('lsBody').addEventListener('keydown', e => { if (e.key === 'Enter') { const r = e.target.closest('[data-ent]'); if (r) openEntrySheet(LS.items[Number(r.dataset.ent)]); } });
 document.getElementById('lsBody').addEventListener('click', e => {
+  const er = e.target.closest('[data-ent]'); if (er && LS.kind === 'entries') { openEntrySheet(LS.items[Number(er.dataset.ent)]); return; }
   const r = e.target.closest('[data-macc]'); if (!r || !LS.masters) return;
   const a = LS.masters.accounts.find(x => String(x.勘定科目ID) === r.dataset.macc); if (!a) return;
   const tb = v => v === true || String(v).toUpperCase() === 'TRUE';
@@ -863,6 +868,7 @@ function lineHtml(idx){
     <div class="row">
       <select class="ln-side" style="flex:1;"><option value="借方">借方</option><option value="貸方">貸方</option></select>
       <select class="ln-account" style="flex:2;"></select>
+      <button type="button" class="btn small outline ln-del" title="この明細を消す" aria-label="この明細を消す">✕</button>
     </div>
     <div class="row" style="margin-top:6px;">
       <input type="number" class="ln-amount" placeholder="金額" style="flex:1;">
@@ -886,6 +892,8 @@ async function addLine(){
   checkBalance();
 }
 document.getElementById('inAddLine').onclick = addLine;
+document.getElementById('inType').addEventListener('change', () => { TYPE_MANUAL = true; checkBalance(); });
+document.getElementById('inTypeAuto').onclick = () => { TYPE_MANUAL = false; checkBalance(); };   // 手入力をやめて、科目からの自動に戻す
 
 function readLines(){
   return Array.from(document.querySelectorAll('#inLines .line')).map(row => ({
@@ -893,38 +901,117 @@ function readLines(){
     accountId: row.querySelector('.ln-account').value,
     amount: Number(row.querySelector('.ln-amount').value) || 0,
     segment: row.querySelector('.ln-segment').value,
-    bonus: row.querySelector('.ln-bonus').checked
+    bonus: row.querySelector('.ln-bonus').checked,
+    investOverride: row.dataset.inv === undefined ? '' : row.dataset.inv
   }));
 }
+document.getElementById('inLines').addEventListener('click', e => {
+  const b = e.target.closest('.ln-del'); if (!b) return;
+  if (document.querySelectorAll('#inLines .line').length <= 2) { document.getElementById('inErr').textContent = '明細は2行以上必要です'; return; }
+  b.closest('.line').remove(); checkBalance();
+});
+/* 種別：明細の科目から自動で入れる（v1.14）
+ *  ・収入・支出の科目が1種類 → その科目の種別（費用で空なら変動費、収入で空ならその他収入）
+ *  ・種別の違う科目が混ざる → 「科目ごと」（科目それぞれの種別で数える）
+ *  ・収入・支出の科目がない → 「振替」
+ *  手で変えたら、その伝票のあいだは自動で上書きしない。保存のときは、自動と同じなら個別指定なし（''）で送る */
+let TYPE_MANUAL = false;
+function autoType(){
+  const byId = {}; (accountsCache || []).forEach(a => { byId[a.勘定科目ID] = a; });
+  const kinds = new Set();
+  readLines().filter(l => l.amount > 0 || readLines().every(x => !x.amount)).forEach(l => {
+    const a = byId[l.accountId]; if (!a) return;
+    if (a.分類 === '費用') kinds.add(a.種別 || '変動費');
+    else if (a.分類 === '収益') kinds.add(a.種別 || 'その他収入');
+  });
+  return kinds.size === 0 ? '振替' : kinds.size === 1 ? Array.from(kinds)[0] : '科目ごと';
+}
+function typeToSend(){
+  const v = document.getElementById('inType').value;
+  return (v === '振替' || v === '科目ごと' || v === autoType()) ? '' : v;
+}
 function checkBalance(){
+  const sel = document.getElementById('inType'), auto = autoType();
+  if (!TYPE_MANUAL) sel.value = auto;
+  document.getElementById('inTypeNote').textContent = !TYPE_MANUAL ? '自動（科目の既定どおり）' : sel.value === auto ? '手で選択（科目の既定と同じ）' : '手で選択：科目の既定（' + auto + '）と違う種別で数えます';
+  document.getElementById('inTypeAuto').classList.toggle('hidden', !TYPE_MANUAL);
   const lines = readLines();
   const debit = lines.filter(l=>l.side==='借方').reduce((s,l)=>s+l.amount,0);
   const credit = lines.filter(l=>l.side==='貸方').reduce((s,l)=>s+l.amount,0);
   const el = document.getElementById('inCheck');
   el.textContent = `借方合計 ${yen(debit)} ／ 貸方合計 ${yen(credit)}` + (debit===credit && debit>0 ? '（一致 OK）' : '');
-  document.getElementById('inSubmit').disabled = !(debit===credit && debit>0);
+  const typeOk = !!document.getElementById('inType').value;
+  document.getElementById('inSubmit').disabled = !(debit===credit && debit>0 && typeOk);
+  if (!typeOk) el.textContent += '　種別を選んでください';
 }
 document.getElementById('inSubmit').onclick = async () => {
   const errEl = document.getElementById('inErr'), okEl = document.getElementById('inOk');
   errEl.textContent = ''; okEl.textContent = '';
   try {
-    const result = await rpc('saveEntry', [{
-      date: document.getElementById('inDate').value,
-      memo: document.getElementById('inMemo').value,
-      typeOverride: document.getElementById('inType').value,
-      lines: readLines(),
-      clientId: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,6)
-    }]);
+    const body = { date: document.getElementById('inDate').value, memo: document.getElementById('inMemo').value,
+      typeOverride: typeToSend(), lines: readLines().filter(l => l.amount > 0) };
+    if (!document.getElementById('inType').value) throw new Error('種別を選んでください');
+    if (EDIT) {                                         // 履歴から開いた伝票を直す
+      await rpc('updateEntry', [EDIT.id, body]);
+      endEdit(); loadSummary();
+      LS.flash = '伝票を直しました';
+      showView('lists', { kind: 'entries' });
+      return;
+    }
+    body.clientId = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    const result = await rpc('saveEntry', [body]);
     okEl.textContent = '登録しました（伝票ID: ' + result.伝票ID + '）';
     document.getElementById('inMemo').value = '';
     document.getElementById('inLines').innerHTML = '';
+    TYPE_MANUAL = false;
     await addLine(); await addLine();
     loadSummary();
   } catch(e) {
     errEl.textContent = e.message;
   }
 };
+// ---- 伝票の編集（v1.13）：履歴から開いた伝票を、入力画面に入れて直す ----
+let EDIT = null;
+function endEdit(){
+  if (!EDIT) return;
+  EDIT = null;
+  document.getElementById('inTitle').textContent = '伝票入力';
+  document.getElementById('inSubmit').textContent = '登録する';
+  document.getElementById('inEditNote').classList.add('hidden');
+  document.getElementById('inMemo').value = ''; document.getElementById('inType').value = ''; TYPE_MANUAL = false;
+  document.getElementById('inDate').value = localToday();
+  document.getElementById('inLines').innerHTML = '';
+}
+async function startEdit(e){
+  EDIT = { id: e.id, entry: e };
+  showView('input');
+}
+async function fillEdit(){
+  const e = EDIT.entry;
+  document.getElementById('inTitle').textContent = '伝票を編集';
+  document.getElementById('inSubmit').textContent = '更新する';
+  const note = document.getElementById('inEditNote');
+  note.textContent = e.date + ' の伝票を直しています。「更新する」で保存、「← 戻る」でやめます。'; note.classList.remove('hidden');
+  document.getElementById('inDate').value = e.date;
+  document.getElementById('inMemo').value = e.memo || '';
+  TYPE_MANUAL = !!e.type;                 // 個別指定があった伝票はその種別のまま、なければ科目から自動
+  document.getElementById('inType').value = e.type || '';
+  document.getElementById('inErr').textContent = ''; document.getElementById('inOk').textContent = '';
+  const wrap = document.getElementById('inLines'); wrap.innerHTML = '';
+  for (const l of e.lines) {
+    await addLine();
+    const row = wrap.lastElementChild;
+    row.querySelector('.ln-side').value = l.side;
+    row.querySelector('.ln-account').value = l.accountId;
+    row.querySelector('.ln-amount').value = l.amount;
+    row.querySelector('.ln-segment').value = l.segment || '家計';
+    row.querySelector('.ln-bonus').checked = !!l.bonus;
+    if (l.investOverride !== '' && l.investOverride !== undefined) row.dataset.inv = l.investOverride;
+  }
+  checkBalance();
+}
 async function prepareInput(){
+  if (EDIT) return fillEdit();
   if (!document.getElementById('inDate').value) document.getElementById('inDate').value = localToday();
   const accs = await ensureAccounts();
   document.querySelectorAll('#inLines .ln-account').forEach(sel => {      // 科目を追加・変更したあとも選べるように作り直す
