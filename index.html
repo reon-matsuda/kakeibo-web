@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>家計簿</title>
+<style>
+  :root{--bg:#f5f6f8;--card:#fff;--ink:#222;--sub:#667;--accent:#4472C4;--line:#e5e7eb;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;background:var(--bg);color:var(--ink);padding-bottom:72px;}
+  header{padding:16px 16px 8px;}
+  h1{font-size:18px;margin:0;}
+  .card{background:var(--card);border-radius:12px;padding:16px;margin:0 16px 16px;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  label{display:block;font-size:12px;color:var(--sub);margin:12px 0 4px;}
+  input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;}
+  .row{display:flex;gap:8px;align-items:center;}
+  .line{border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:8px;}
+  .btn{padding:10px 14px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn.outline{background:#fff;color:var(--accent);border:1px solid var(--accent);}
+  .btn.small{padding:6px 10px;font-size:12px;}
+  .btn:disabled{background:#aaa;}
+  .big{font-size:28px;font-weight:700;}
+  .sub{font-size:12px;color:var(--sub);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+  .stat{background:#f8f9fb;border-radius:10px;padding:10px;}
+  .stat .v{font-size:18px;font-weight:700;}
+  .stat .k{font-size:11px;color:var(--sub);}
+  .tabbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);display:flex;}
+  .tabbar button{flex:1;padding:12px 0;border:none;background:none;font-size:12px;color:#999;}
+  .tabbar button.active{color:var(--accent);font-weight:700;}
+  .err{color:#c62828;font-size:13px;margin-top:8px;}
+  .ok{color:#2e7d32;font-size:13px;margin-top:8px;}
+  .hidden{display:none !important;}
+  .note{font-size:11px;color:#999;margin-top:10px;}
+  .chk{width:auto;margin:0;}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:#e8f0fe;color:var(--accent);}
+  .pill.done{background:#e6f4ea;color:#2e7d32;}
+  .plus{color:#2e7d32;} .minus{color:#c62828;}
+  .opt{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--ink);margin:0;}
+  details summary{cursor:pointer;font-size:13px;color:var(--accent);margin-top:8px;}
+</style>
+</head>
+<body>
+<div id="gate" class="card" style="margin-top:40px;">
+  <h1>家計簿</h1>
+  <p class="sub">受け取ったアクセスキーを入力してください。</p>
+  <input id="gateKey" placeholder="アクセスキー" autocomplete="off" spellcheck="false">
+  <div id="gateErr" class="err"></div>
+  <button class="btn" style="margin-top:12px;width:100%;" id="gateGo">開く</button>
+</div>
+
+<div id="app" class="hidden">
+<header><h1>家計簿</h1></header>
+
+<!-- 今月の残り -->
+<div id="view-summary" class="card">
+  <div class="row" style="justify-content:space-between;">
+    <strong id="sumYm">今月</strong>
+    <button class="btn small outline" id="sumReload">更新</button>
+  </div>
+  <div style="margin-top:12px;">
+    <div class="sub">1日あたり使える額</div>
+    <div class="big" id="perDay">－</div>
+  </div>
+  <div id="sumAlerts"></div>
+  <div class="grid2">
+    <div class="stat"><div class="k">自由費残高（繰越込）</div><div class="v" id="freeLeft">－</div></div>
+    <div class="stat"><div class="k">残り日数</div><div class="v" id="remainDays">－</div></div>
+    <div class="stat"><div class="k">月収（賞与除く）</div><div class="v" id="income">－</div></div>
+    <div class="stat"><div class="k">貯蓄額（賞与込）</div><div class="v" id="saving">－</div></div>
+    <div class="stat"><div class="k">毎月固定費（予定）</div><div class="v" id="fixed">－</div></div>
+    <div class="stat"><div class="k">固定費 実績−予定</div><div class="v" id="fixedDiff">－</div></div>
+    <div class="stat"><div class="k">投資予定額（今月）</div><div class="v" id="invest">－</div></div>
+    <div class="stat"><div class="k">実際の投資額</div><div class="v" id="investActual">－</div></div>
+    <div class="stat" style="grid-column:1/3;"><div class="k">残投資予定額（繰越込・月末）</div><div class="v" id="investEnd">－</div></div>
+  </div>
+  <div class="sub" style="margin-top:12px;" id="breakdown"></div>
+  <div id="annualBox"></div>
+  <div class="note" id="sumNote"></div>
+</div>
+
+<!-- 入力 -->
+<div id="view-input" class="card hidden">
+  <strong>伝票入力</strong>
+  <label>日付</label>
+  <input type="date" id="inDate">
+  <label>摘要</label>
+  <input type="text" id="inMemo" placeholder="例：スーパーで食材">
+  <label>種別（個別指定・任意）</label>
+  <select id="inType">
+    <option value="">（科目の既定どおり）</option>
+    <option>給与収入</option><option>その他収入</option><option>毎月固定費</option>
+    <option>年払い固定費</option><option>ローン</option><option>変動費</option>
+  </select>
+  <div id="inLines"></div>
+  <button class="btn outline small" id="inAddLine" style="margin-top:10px;">＋ 明細を追加</button>
+  <div id="inCheck" class="sub" style="margin-top:8px;"></div>
+  <div id="inErr" class="err"></div>
+  <div id="inOk" class="ok"></div>
+  <button class="btn" id="inSubmit" style="margin-top:12px;width:100%;">登録する</button>
+</div>
+
+<!-- 設定（率・年払い固定費・ローン） -->
+<div id="view-settings" class="card hidden">
+  <strong>基本設定</strong>
+  <div class="row"><div style="flex:1;"><label>貯蓄率（%）</label><input type="number" id="stSave" step="0.1"></div>
+  <div style="flex:1;"><label>投資率（%）</label><input type="number" id="stInvest" step="0.1"></div></div>
+  <div class="row"><div style="flex:1;"><label>期待利回り（%）</label><input type="number" id="stExp" step="0.1"></div>
+  <div style="flex:1;"><label>集計開始月</label><input type="month" id="stStart"></div></div>
+  <div class="note">期待利回り＝eMAXIS Slim オールカントリーの平均利益率の目安。これを上回る金利のローンには警告を出します。</div>
+  <button class="btn small" id="stSaveBtn" style="margin-top:10px;">保存</button>
+  <div id="stMsg" class="ok"></div>
+
+  <hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">
+  <strong>年払い固定費</strong>
+  <div id="annList"></div>
+  <div class="row" style="margin-top:8px;"><input id="anName" placeholder="名称" style="flex:2;"><input id="anAmt" type="number" placeholder="1回の支払額" style="flex:2;"></div>
+  <div class="row"><div style="flex:1;"><label>初回支払月</label><input id="anFirst" type="month"></div>
+  <div style="flex:1;"><label>積立開始月（空なら今月）</label><input id="anStart" type="month"></div></div>
+  <label>支払いの勘定科目（支払いを見分けるのに使います）</label><select id="anAcc"></select>
+  <button class="btn small outline" id="anAdd" style="margin-top:8px;">＋ 追加</button>
+  <div class="note">先に積み立て、あとで払います。初回が数か月先なら、その月数で割って積み立てます（2回目以降は12か月）。積立開始月と初回支払月が同じ月だと、初回は自由費から払います。支払月に払わなかった場合は、翌月に積立分を自由費へ戻します。</div>
+
+  <hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">
+  <strong>ローン</strong>
+  <div id="loanList"></div>
+  <div class="row" style="margin-top:8px;"><input id="lnName" placeholder="名称" style="flex:2;"><input id="lnAmt" type="number" placeholder="借入額" style="flex:2;"></div>
+  <div class="row" style="margin-top:6px;"><input id="lnMonth" type="month" style="flex:2;"><input id="lnN" type="number" placeholder="回数" style="flex:1;"><input id="lnRate" type="number" step="0.1" placeholder="年利%" style="flex:1;"></div>
+  <button class="btn small outline" id="lnAdd" style="margin-top:8px;">＋ 追加（均等割りで返済表を作成）</button>
+  <div id="stErr" class="err"></div>
+  <div class="note">返済額は登録後に1回ごとに変更できます。購入そのものは「種別：ローン」で入力すると変動費に混ざりません。</div>
+
+  <hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">
+  <strong>割り勘を家計に反映する設定</strong>
+  <label>自分の名前（割り勘のメンバー名と同じ表記）</label><input id="lgMe" placeholder="例：自分">
+  <label>費用の科目（自分の負担額が入る。種別は変動費などに）</label><select id="lgExp"></select>
+  <label>立替金の科目（資産。「家計反映対象」はオフにしておく）</label><select id="lgRec"></select>
+  <label>支払元の口座（普段お金が出る口座）</label><select id="lgPay"></select>
+  <div class="row" style="margin-top:8px;"><button class="btn small" id="lgSave">保存</button><span class="ok" id="lgMsg"></span></div>
+  <div class="note">割り勘の支払いを登録すると、自分の立替額と負担額から家計の伝票を1枚つくります。負担額だけが自由費を減らし、他人の分の立替は「立替金」に残ります。実際に精算したら、「入力」で 立替金 ⇔ 銀行 の伝票を入れてください。</div>
+
+  <hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">
+  <strong>他アプリとの連携</strong>
+  <div class="sub" style="margin-top:6px;">タスク管理アプリなどに渡す、専用のキーです（今日の状況の取得と、人のリストの同期だけができます。家計の中身は変更できません）。</div>
+  <div id="svList"></div>
+  <div class="row" style="margin-top:8px;"><input id="svName" placeholder="連携先の名前（例：タスク管理アプリ）"><button class="btn small" id="svIssue">発行</button></div>
+  <label>連携先に渡す API の URL</label><input id="svUrl" readonly onclick="this.select()" style="font-size:12px;">
+  <label>人のリスト（暫定・1行に1人）</label>
+  <textarea id="ppText" rows="4" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:15px;" placeholder="あや&#10;こう"></textarea>
+  <div class="row" style="margin-top:6px;"><button class="btn small outline" id="ppSave">保存</button><span class="ok" id="ppMsg"></span></div>
+  <div class="note">本来は、タスク管理アプリの人のマスタが正です。連携キーで同期すると、ここが上書きされます。割り勘のメンバー候補に使います。</div>
+
+  <hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">
+  <strong>古い取引のアーカイブ</strong>
+  <div class="sub" style="margin-top:6px;">指定した月より前の伝票を別シートへ退避します。月ごとの集計は残るので、「今月の残り」の繰越は変わりません。直近6か月は対象外です。</div>
+  <div class="row" style="margin-top:8px;"><input type="month" id="arMonth" style="flex:2;"><button class="btn small outline" id="arDry">件数を確認</button><button class="btn small" id="arRun" disabled>退避する</button></div>
+  <div id="arResult" class="sub" style="margin-top:8px;"></div>
+
+  <div id="arStatus" class="sub" style="margin-top:14px;"></div>
+  <div class="row" style="margin-top:8px;"><input type="month" id="arRestoreMonth" style="flex:2;"><button class="btn small outline" id="arRDry">件数を確認</button><button class="btn small" id="arRRun" disabled>元に戻す</button></div>
+  <div class="note">指定した月「以降」の退避分を本体へ戻します（月を空にすると全部）。戻したあとも「今月の残り」の数字は変わりません。</div>
+  <div id="arRResult" class="sub" style="margin-top:6px;"></div>
+</div>
+
+<!-- 割り勘 -->
+<div id="view-warikan" class="card hidden">
+  <div class="row" style="justify-content:space-between;">
+    <strong id="wkTitle">割り勘</strong><span id="wkBadge"></span>
+  </div>
+  <div id="wkOwnerBar">
+    <select id="wkProject" style="margin-top:8px;"></select>
+    <details>
+      <summary>＋ 新しいプロジェクトを作る</summary>
+      <label>プロジェクト名</label><input id="wkNewName" placeholder="例：沖縄旅行">
+      <label>メンバー（読点・カンマ区切り、2人以上）</label><input id="wkNewMembers" placeholder="例：自分、あやか、こうへい">
+      <div id="wkPeople" class="row" style="flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
+      <button class="btn small" id="wkNewBtn" data-act="newProject" style="margin-top:8px;">作成</button>
+    </details>
+  </div>
+  <div id="wkBody"></div>
+  <div id="wkForm"></div>
+  <div id="wkTools"></div>
+  <div id="wkErr" class="err"></div>
+</div>
+
+</div>
+
+</div>
+
+<div class="tabbar" id="tabbar">
+  <button data-tab="summary" class="active">今月の残り</button>
+  <button data-tab="input">入力</button>
+  <button data-tab="warikan">割り勘</button>
+  <button data-tab="settings">設定</button>
+</div>
+
+<script src="config.js"></script>
+<script>
+const APP_URL = (window.KAKEIBO_CONFIG && window.KAKEIBO_CONFIG.apiUrl) || '';
+const KEY_STORE = 'kakeibo_key';
+function getKey(){
+  const url = new URL(location.href);
+  const fromUrl = url.searchParams.get('key');
+  if (fromUrl) { try{ localStorage.setItem(KEY_STORE, fromUrl); }catch(e){} return fromUrl; }
+  try { return localStorage.getItem(KEY_STORE) || ''; } catch(e){ return ''; }
+}
+function setKey(k){ try{ localStorage.setItem(KEY_STORE, k); }catch(e){} }
+
+function nonce(){ return 'n' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+async function rpc(method, args){
+  if (!APP_URL) throw new Error('config.js の apiUrl が未設定です');
+  const key = getKey();
+  const n = nonce();
+  const res = await fetch(APP_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ method, args: args || [], auth: key, n })
+  });
+  const text = await res.text();
+  let json; try { json = JSON.parse(text); } catch(e){ throw new Error('サーバーの応答を読み取れません'); }
+  if (json.n && json.n !== n) throw new Error('別のリクエストの応答が返りました。もう一度お試しください');
+  if (!json.ok) throw new Error(json.error || '不明なエラー');
+  if (json.m !== method) throw new Error('送信内容がサーバーへ届きませんでした');
+  return json.result;
+}
+
+// ---- キーゲート ----
+let ME = { mode: 'owner' };
+async function showApp(){
+  const gateErr = document.getElementById('gateErr');
+  try {
+    ME = await rpc('whoAmI', []);
+  } catch(e) {
+    document.getElementById('gate').classList.remove('hidden');
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('tabbar').classList.add('hidden');
+    gateErr.textContent = e.message;
+    return;
+  }
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  if (ME.mode === 'friend') {
+    // 友人キー：割り勘の自分のプロジェクトだけを見せる
+    document.getElementById('tabbar').classList.add('hidden');
+    ['summary','input','settings'].forEach(t => document.getElementById('view-' + t).classList.add('hidden'));
+    document.getElementById('view-warikan').classList.remove('hidden');
+    document.querySelector('header h1').textContent = '割り勘';
+    loadWarikanProjects();
+    return;
+  }
+  document.getElementById('tabbar').classList.remove('hidden');
+  loadSummary();
+}
+document.getElementById('gateGo').onclick = () => {
+  const k = document.getElementById('gateKey').value.trim();
+  if (!k) { document.getElementById('gateErr').textContent = 'キーを入力してください'; return; }
+  setKey(k);
+  showApp();
+};
+if (getKey()) { showApp(); }
+
+// ---- タブ ----
+document.getElementById('tabbar').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-tab]');
+  if (!btn) return;
+  document.querySelectorAll('#tabbar button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['summary','input','warikan','settings'].forEach(t => {
+    document.getElementById('view-' + t).classList.toggle('hidden', t !== btn.dataset.tab);
+  });
+  if (btn.dataset.tab === 'warikan') loadWarikanProjects();
+  if (btn.dataset.tab === 'settings') loadSettingsView();
+});
+
+// ---- 今月の残り ----
+function yen(n){ return (Number(n)||0).toLocaleString() + '円'; }
+async function loadSummary(){
+  try {
+    const x = await rpc('getMonthSummary', []);
+    const set = (id, t) => { document.getElementById(id).textContent = t; };
+    set('sumYm', x.yyyymm);
+    set('perDay', x.freeLeftPerDay === null ? '－' : yen(x.freeLeftPerDay));
+    set('freeLeft', yen(x.freeLeftMonth));
+    set('remainDays', x.remainingDays + '日');
+    set('income', yen(x.monthlyIncome));
+    set('saving', yen(x.savingTotal));
+    set('fixed', yen(x.fixedMonthlyPlan));
+    set('fixedDiff', (x.fixedDiff > 0 ? '+' : '') + yen(x.fixedDiff));
+    set('invest', yen(x.investFinal));
+    set('investActual', yen(x.investActual));
+    set('investEnd', yen(x.investEnd));
+    document.getElementById('sumAlerts').innerHTML = (x.alerts || []).map(a =>
+      '<div class="line" style="background:#fff8e1;border-color:#ffe082;margin-top:10px;">⚠️ ' + esc(a.text) + '</div>').join('');
+    set('breakdown', '投資予定額の内訳：基本 ' + yen(x.investPlannedBase) + ' ＋ 年払い積立 ' + yen(x.annualAccrual) +
+      ' ＋ ローン借入 ' + yen(x.loanBorrow) + ' − 年払い支払 ' + yen(x.annualPay) + ' − ローン返済 ' + yen(x.loanRepay) + (x.annualRelease ? ' − 積立の解放 ' + yen(x.annualRelease) + '（自由費へ戻しました）' : '') +
+      (x.annualFreeCharge ? '　／　自由費で払った年払い ' + yen(x.annualFreeCharge) : '') +
+      '　／　賞与 ' + yen(x.bonusTotal) + '（全額貯蓄）／ 当月の変動費 ' + yen(x.variable));
+    document.getElementById('annualBox').innerHTML = (x.annualItems || []).length ? '<div class="sub" style="margin-top:12px;">年払い固定費の積立</div>' +
+      x.annualItems.map(i => '<div class="line"><div class="row" style="justify-content:space-between;"><b>' + esc(i.名称) + '</b><span>' + yen(i.積立残高) + ' ／ ' + yen(i.年額) + '</span></div>' +
+        '<div class="sub">次回 ' + i.次回支払月 + '　' + (i.初回は自由費から ? '初回は自由費から払います' : '毎月 ' + yen(i.毎月の積立) + ' 積立') + '</div></div>').join('') : '';
+    set('sumNote', '1日あたり使える額は、繰越を除いた当月収入分だけで計算しています。');
+  } catch(e) {
+    document.getElementById('sumNote').textContent = 'エラー: ' + e.message;
+  }
+}
+function esc(t){ return String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+document.getElementById('sumReload').onclick = loadSummary;
+
+// ---- 入力 ----
+let accountsCache = null;
+async function ensureAccounts(){
+  if (accountsCache) return accountsCache;
+  accountsCache = await rpc('getAccounts', []);
+  return accountsCache;
+}
+function lineHtml(idx){
+  return `<div class="line" data-idx="${idx}">
+    <div class="row">
+      <select class="ln-side" style="flex:1;"><option value="借方">借方</option><option value="貸方">貸方</option></select>
+      <select class="ln-account" style="flex:2;"></select>
+    </div>
+    <div class="row" style="margin-top:6px;">
+      <input type="number" class="ln-amount" placeholder="金額" style="flex:1;">
+      <select class="ln-segment" style="flex:1;"><option value="家計">家計</option><option value="副業">副業</option></select>
+      <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
+        <input type="checkbox" class="ln-bonus" style="width:auto;">賞与
+      </label>
+    </div>
+  </div>`;
+}
+async function addLine(){
+  const wrap = document.getElementById('inLines');
+  const idx = wrap.children.length;
+  wrap.insertAdjacentHTML('beforeend', lineHtml(idx));
+  const row = wrap.lastElementChild;
+  const accs = await ensureAccounts();
+  const sel = row.querySelector('.ln-account');
+  sel.innerHTML = accs.map(a => `<option value="${a.勘定科目ID}">${a.勘定科目名}</option>`).join('');
+  row.querySelectorAll('input,select').forEach(el => el.addEventListener('input', checkBalance));
+  checkBalance();
+}
+document.getElementById('inAddLine').onclick = addLine;
+
+function readLines(){
+  return Array.from(document.querySelectorAll('#inLines .line')).map(row => ({
+    side: row.querySelector('.ln-side').value,
+    accountId: row.querySelector('.ln-account').value,
+    amount: Number(row.querySelector('.ln-amount').value) || 0,
+    segment: row.querySelector('.ln-segment').value,
+    bonus: row.querySelector('.ln-bonus').checked
+  }));
+}
+function checkBalance(){
+  const lines = readLines();
+  const debit = lines.filter(l=>l.side==='借方').reduce((s,l)=>s+l.amount,0);
+  const credit = lines.filter(l=>l.side==='貸方').reduce((s,l)=>s+l.amount,0);
+  const el = document.getElementById('inCheck');
+  el.textContent = `借方合計 ${yen(debit)} ／ 貸方合計 ${yen(credit)}` + (debit===credit && debit>0 ? '（一致 OK）' : '');
+  document.getElementById('inSubmit').disabled = !(debit===credit && debit>0);
+}
+document.getElementById('inSubmit').onclick = async () => {
+  const errEl = document.getElementById('inErr'), okEl = document.getElementById('inOk');
+  errEl.textContent = ''; okEl.textContent = '';
+  try {
+    const result = await rpc('saveEntry', [{
+      date: document.getElementById('inDate').value,
+      memo: document.getElementById('inMemo').value,
+      typeOverride: document.getElementById('inType').value,
+      lines: readLines(),
+      clientId: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2,6)
+    }]);
+    okEl.textContent = '登録しました（伝票ID: ' + result.伝票ID + '）';
+    document.getElementById('inMemo').value = '';
+    document.getElementById('inLines').innerHTML = '';
+    addLine();
+    loadSummary();
+  } catch(e) {
+    errEl.textContent = e.message;
+  }
+};
+if (!document.getElementById('inDate').value) document.getElementById('inDate').value = new Date().toISOString().slice(0,10);
+addLine();
+
+// ---- 割り勘 ----
+const wk = { id: '', detail: null, equal: [], equalKey: '', seq: 0, timer: null, clientId: '' };
+const $ = (id) => document.getElementById(id);
+function signed(n){ n = Number(n) || 0; return '<span class="' + (n > 0 ? 'plus' : n < 0 ? 'minus' : '') + '">' + (n > 0 ? '+' : '') + yen(n) + '</span>'; }
+function newClientId(){ return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function wkErr(t){ $('wkErr').textContent = t || ''; }
+
+let peopleCache = null;
+async function loadPeopleChips(){
+  try {
+    if (!peopleCache) peopleCache = await rpc('getPeople', []);
+    $('wkPeople').innerHTML = peopleCache.map(x => `<button class="btn small outline" data-act="addPerson" data-name="${esc(x.name)}">＋${esc(x.name)}</button>`).join('');
+  } catch(e) { /* 候補が出ないだけなので無視 */ }
+}
+async function loadWarikanProjects(selectId){
+  const isOwner = ME.mode === 'owner';
+  $('wkOwnerBar').classList.toggle('hidden', !isOwner);
+  wkErr('');
+  if (!isOwner) { return loadWarikanDetail(ME.projectId); }
+  loadPeopleChips();
+  try {
+    const projects = await rpc('getWarikanProjects', []);
+    const sel = $('wkProject');
+    sel.innerHTML = projects.map(p => `<option value="${esc(p.プロジェクトID)}">${esc(p.名称)}${p.ステータス === '精算済み' ? '（精算済み）' : ''}</option>`).join('');
+    sel.onchange = () => loadWarikanDetail(sel.value);
+    if (!projects.length) {
+      $('wkTitle').textContent = '割り勘'; $('wkBadge').innerHTML = '';
+      $('wkBody').innerHTML = '<div class="sub" style="margin-top:10px;">プロジェクトがまだありません。上の「新しいプロジェクトを作る」から作成してください。</div>';
+      $('wkForm').innerHTML = ''; $('wkTools').innerHTML = '';
+      return;
+    }
+    const want = selectId || wk.id;
+    sel.value = projects.some(p => p.プロジェクトID === want) ? want : projects[0].プロジェクトID;
+    loadWarikanDetail(sel.value);
+  } catch(e) { wkErr(e.message); }
+}
+
+async function loadWarikanDetail(id){
+  wkErr('');
+  try {
+    const d = await rpc('getWarikanProject', [id]);
+    renderWarikan(d);
+  } catch(e) { wkErr(e.message); }
+}
+
+function renderWarikan(d){
+  const switched = wk.id !== d.project.プロジェクトID;
+  wk.id = d.project.プロジェクトID; wk.detail = d;
+  if (switched || !wk.clientId) wk.clientId = newClientId();
+  const done = d.project.ステータス === '精算済み';
+  $('wkTitle').textContent = d.project.名称;
+  $('wkBadge').innerHTML = `<span class="pill ${done ? 'done' : ''}">${esc(d.project.ステータス)}</span>`;
+  const spent = d.spentByMember, paid = d.paidByMember;
+  $('wkBody').innerHTML = `
+    <div class="sub" style="margin-top:10px;">グループ支出合計：${yen(d.totalGroupSpend)}</div>
+    <div class="grid2">${d.members.map(m => `<div class="stat"><div class="k">${esc(m)}</div><div class="v">${signed(d.balances[m])}</div>
+      <div class="k">立替 ${yen(paid[m])} ／ 負担 ${yen(spent[m])}</div></div>`).join('')}</div>
+    <div class="sub" style="margin-top:6px;">＋は受け取る額、−は払う額です。</div>
+    <div class="sub" style="margin-top:10px;">精算プラン（送金回数が最小になる組み合わせ）</div>
+    ${d.settlement.length ? d.settlement.map(s => `<div class="line"><div>${esc(s.from)} → ${esc(s.to)} ： <b>${yen(s.amount)}</b></div>
+      ${ME.mode === 'owner' && !done ? `<div class="row" style="margin-top:6px;"><input type="number" class="st-amt" value="${s.amount}" min="1" step="1" style="flex:1;"><button class="btn small" data-act="settle" data-from="${esc(s.from)}" data-to="${esc(s.to)}">送金済みにする</button></div>` : ''}</div>`).join('') + (ME.mode === 'owner' && !done ? '<div class="note">実際に送金したら「送金済みにする」を押すと、貸し借りがその分だけ減ります。金額を変えれば一部だけの精算も記録できます。' + (d.ledger && d.ledger.ready ? '自分が関わる送金は、家計の伝票（立替金⇔口座）にも自動で入ります。' : '') + '</div>' : '') : '<div class="sub">精算の必要はありません</div>'}
+    <details><summary>支払い履歴（${d.payments.length}件）</summary>
+      ${d.payments.map(p => p.種類 === '精算' ? `<div class="line"><div class="row" style="justify-content:space-between;"><b><span class="pill done">精算</span> ${esc(p.摘要 || '')}</b><span>${yen(p.総額)}</span></div>
+        <div class="sub">${esc(dateOnly(p.日付))}　送金：${p.payers.map(x => esc(x.メンバー名)).join('、')} → ${p.lines.map(x => esc(x.メンバー名)).join('、')}</div>${ledgerBadge(d, p)}</div>` :
+        `<div class="line"><div class="row" style="justify-content:space-between;"><b>${esc(p.摘要 || '（内容なし）')}</b><span>${yen(p.総額)}</span></div>
+        <div class="sub">${esc(dateOnly(p.日付))}　立替：${p.payers.map(x => esc(x.メンバー名) + ' ' + yen(x.金額)).join('、')}</div>
+        <div class="sub">負担：${p.lines.map(x => esc(x.メンバー名) + ' ' + yen(x.金額) + (x.端数フラグ === true || x.端数フラグ === 'TRUE' ? '（端数）' : '')).join('、')}</div>${ledgerBadge(d, p)}</div>`).join('') || '<div class="sub">まだありません</div>'}
+    </details>`;
+  renderPaymentForm(d, done);
+  if (ME.mode === 'owner') renderTools(d, done); else $('wkTools').innerHTML = '';
+}
+function cancelBtn(d, p){
+  if (ME.mode !== 'owner' || d.project.ステータス === '精算済み') return '';
+  return `<div style="margin-top:6px;text-align:right;"><button class="btn small outline" data-act="cancelPay" data-id="${esc(p.支払いID)}" data-kind="${esc(p.種類 || '支払い')}" data-memo="${esc(p.摘要 || '')}" data-ledger="${p.家計伝票ID && p.家計伝票ID !== '(対象外)' ? '1' : ''}">取り消す</button></div>`;
+}
+function ledgerBadge(d, p){
+  if (ME.mode !== 'owner' || !d.ledger || !d.ledger.ready) return cancelBtn(d, p);
+  if (p.家計伝票ID === '(対象外)') return '<div class="sub">家計：自分は関係しない支払い</div>' + cancelBtn(d, p);
+  if (p.家計伝票ID) return '<div class="sub"><span class="pill done">家計に反映済み</span></div>' + cancelBtn(d, p);
+  return `<div class="row" style="margin-top:6px;"><span class="pill">家計に未反映</span><button class="btn small outline" data-act="postOne" data-id="${esc(p.支払いID)}">反映する</button></div>` + cancelBtn(d, p);
+}
+function dateOnly(v){ return String(v || '').slice(0, 10); }
+
+function renderPaymentForm(d, done){
+  clearTimeout(wk.timer); wk.seq++; // 古い予約・応答は無効にする
+  if (done) { $('wkForm').innerHTML = '<hr style="border:0;border-top:1px solid var(--line);margin:16px 0;"><div class="sub">このプロジェクトは精算済みです。支払いを追加するには、下の「進行中に戻す」を押してください。</div>'; return; }
+  const ms = d.members;
+  $('wkForm').innerHTML = `
+    <hr style="border:0;border-top:1px solid var(--line);margin:16px 0;">
+    <strong>支払いを登録</strong>
+    <div class="row"><div style="flex:1;"><label>日付</label><input type="date" id="wfDate" value="${new Date().toISOString().slice(0,10)}"></div>
+    <div style="flex:1;"><label>総額（円）</label><input type="number" id="wfTotal" inputmode="numeric" min="1" step="1"></div></div>
+    <label>内容</label><input id="wfMemo" placeholder="例：レンタカー">
+
+    <label>立て替えた人</label>
+    <div class="row" style="gap:14px;">
+      <label class="opt"><input class="chk" type="radio" name="wfPayMode" value="single" checked>ひとりが全額</label>
+      <label class="opt"><input class="chk" type="radio" name="wfPayMode" value="custom">複数人・金額を指定</label>
+    </div>
+    <div id="wfPaySingle"><select id="wfPayer">${ms.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select></div>
+    <div id="wfPayCustom" class="hidden">${ms.map(m => `<div class="row" style="margin-top:6px;"><span style="flex:1;font-size:14px;">${esc(m)}</span><input type="number" class="wf-pay" data-m="${esc(m)}" min="0" step="1" style="flex:1;" placeholder="0"></div>`).join('')}</div>
+
+    <label>負担する人（その支払いを使った人）</label>
+    <div class="row" style="flex-wrap:wrap;gap:6px 14px;">${ms.map(m => `<label class="opt"><input class="chk wf-part" type="checkbox" data-m="${esc(m)}" checked>${esc(m)}</label>`).join('')}</div>
+    <div class="row" style="gap:14px;margin-top:8px;">
+      <label class="opt"><input class="chk" type="radio" name="wfShareMode" value="equal" checked>均等割り</label>
+      <label class="opt"><input class="chk" type="radio" name="wfShareMode" value="custom">金額を指定</label>
+    </div>
+    <div id="wfEqual" class="sub" style="margin-top:6px;"></div>
+    <div id="wfShareCustom" class="hidden">${ms.map(m => `<div class="row" style="margin-top:6px;"><span style="flex:1;font-size:14px;">${esc(m)}</span><input type="number" class="wf-share" data-m="${esc(m)}" min="0" step="1" style="flex:1;" placeholder="0"></div>`).join('')}</div>
+    <div id="wfCheck" class="sub" style="margin-top:8px;"></div>
+    ${ME.mode === 'owner' && d.ledger ? (d.ledger.ready
+      ? `<label class="opt" style="margin-top:10px;"><input class="chk" type="checkbox" id="wfLedger" checked>家計の伝票にも反映する（${esc(d.ledger.myName)}の分）</label>`
+      : '<div class="note">設定画面で「割り勘を家計に反映する設定」をすると、自分の分を家計の伝票にも自動で入れられます。</div>') : ''}
+    <div id="wfErr" class="err"></div><div id="wfOk" class="ok"></div>
+    <button class="btn" id="wfSubmit" data-act="submitPayment" style="margin-top:10px;width:100%;" disabled>登録する</button>`;
+  wk.equal = []; wk.equalKey = '';
+  wfRefresh();
+}
+
+const wfVal = (sel, el) => Array.from(document.querySelectorAll(sel)).map(x => ({ member: x.dataset.m, amount: Math.floor(Number(x.value)) || 0 }));
+function wfTotal(){ return Math.floor(Number($('wfTotal').value)) || 0; }
+function wfPayMode(){ return document.querySelector('input[name=wfPayMode]:checked').value; }
+function wfShareMode(){ return document.querySelector('input[name=wfShareMode]:checked').value; }
+function wfParticipants(){ return Array.from(document.querySelectorAll('.wf-part:checked')).map(x => x.dataset.m); }
+function wfPayers(){
+  if (wfPayMode() === 'single') return [{ member: $('wfPayer').value, amount: wfTotal() }];
+  return wfVal('.wf-pay').filter(x => x.amount > 0);
+}
+function wfLines(){
+  if (wfShareMode() === 'equal') return wk.equal.map(x => ({ member: x.member, amount: x.amount, isFraction: x.isFraction }));
+  return wfVal('.wf-share').filter(x => x.amount > 0).map(x => ({ member: x.member, amount: x.amount, isFraction: false }));
+}
+
+/** 均等割りの再計算（サーバーで端数を公平に配る）。入力が速いと古い応答が混ざるので連番で最新だけ採用 */
+async function wfRecomputeEqual(){
+  if (!$('wfTotal')) return; // フォームが消えた後（精算済みなど）に予約が残っていても何もしない
+  const total = wfTotal(), parts = wfParticipants();
+  const key = JSON.stringify([total, parts]);
+  if (total <= 0 || !parts.length) { wk.equal = []; wk.equalKey = key; wfRefresh(true); return; }
+  const my = ++wk.seq;
+  try {
+    const r = await rpc('calcEqualShares', [wk.id, total, parts]);
+    if (my !== wk.seq) return;
+    wk.equal = r; wk.equalKey = key;
+  } catch(e) { if (my === wk.seq) { wk.equal = []; $('wfErr').textContent = e.message; } }
+  wfRefresh(true);
+}
+
+function wfRefresh(fromCalc){
+  if (!$('wfTotal')) return;
+  const pm = wfPayMode(), sm = wfShareMode();
+  $('wfPaySingle').classList.toggle('hidden', pm !== 'single');
+  $('wfPayCustom').classList.toggle('hidden', pm !== 'custom');
+  $('wfShareCustom').classList.toggle('hidden', sm !== 'custom');
+  $('wfEqual').classList.toggle('hidden', sm !== 'equal');
+  document.querySelectorAll('.wf-part').forEach(x => x.closest('label').classList.toggle('hidden', sm !== 'equal'));
+  const total = wfTotal();
+  if (sm === 'equal') {
+    const key = JSON.stringify([total, wfParticipants()]);
+    if (!fromCalc && key !== wk.equalKey) {
+      wk.equal = []; // 古い計算結果は捨てて、少し待ってから再計算
+      clearTimeout(wk.timer); wk.timer = setTimeout(wfRecomputeEqual, 250);
+    }
+    $('wfEqual').innerHTML = wk.equal.length
+      ? wk.equal.map(x => `${esc(x.member)} ${yen(x.amount)}${x.isFraction ? ' <span class="pill">端数+1円</span>' : ''}`).join('<br>')
+      : (total > 0 ? '計算中…' : '総額を入れると、1人あたりの金額を計算します');
+  }
+  const payers = wfPayers(), lines = wfLines();
+  const ps = payers.reduce((s, x) => s + x.amount, 0), ls = lines.reduce((s, x) => s + x.amount, 0);
+  const ok = total > 0 && ps === total && ls === total;
+  let msg = `総額 ${yen(total)}　立替合計 ${yen(ps)}${ps === total ? '' : '（差 ' + yen(total - ps) + '）'}　負担合計 ${yen(ls)}${ls === total ? '' : '（差 ' + yen(total - ls) + '）'}`;
+  $('wfCheck').textContent = msg + (ok ? '　OK' : '');
+  $('wfSubmit').disabled = !ok;
+}
+
+async function wfSubmit(){
+  const btn = $('wfSubmit'); $('wfErr').textContent = ''; $('wfOk').textContent = '';
+  btn.disabled = true;
+  try {
+    if (wfShareMode() === 'equal') { clearTimeout(wk.timer); await wfRecomputeEqual(); }
+    const total = wfTotal(), payers = wfPayers(), lines = wfLines();
+    const ps = payers.reduce((s, x) => s + x.amount, 0), ls = lines.reduce((s, x) => s + x.amount, 0);
+    if (ps !== total || ls !== total) throw new Error('金額が合っていません。立替合計・負担合計を総額に合わせてください');
+    const d = await rpc('submitWarikanPayment', [wk.id, { date: $('wfDate').value, memo: $('wfMemo').value, total, clientId: wk.clientId, postToLedger: !!($('wfLedger') && $('wfLedger').checked) }, payers, lines]);
+    wk.clientId = newClientId();
+    renderWarikan(d);
+    $('wfOk').textContent = d.duplicated ? 'すでに登録済みでした（二重登録は防いでいます）' : '登録しました';
+    if (d.ledgerError) { $('wfOk').textContent = ''; $('wfErr').textContent = '割り勘は登録しましたが、家計への反映に失敗しました：' + d.ledgerError; }
+  } catch(e) { $('wfErr').textContent = e.message; wfRefresh(true); }
+}
+
+function renderTools(d, done){
+  $('wkTools').innerHTML = `
+    <hr style="border:0;border-top:1px solid var(--line);margin:16px 0;">
+    <details><summary>プロジェクトの管理</summary>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn small outline" data-act="toggleStatus" data-next="${done ? '進行中' : '精算済み'}">${done ? '進行中に戻す' : '精算済みにする'}</button>
+      </div>
+      ${d.ledger && d.ledger.ready && d.ledger.unposted ? `<div class="row" style="margin-top:8px;"><button class="btn small" data-act="postAll">家計に未反映の ${d.ledger.unposted}件をまとめて反映</button></div>` : ''}
+      <label>メンバーを追加</label>
+      <div class="row"><input id="wkAddName" placeholder="名前"><button class="btn small" data-act="addMember">追加</button></div>
+      <label>友人に送る専用リンク（このプロジェクトの割り勘だけ見られます）</label>
+      <div class="row"><input id="wkKeyName" placeholder="相手の名前"><button class="btn small" data-act="issueKey">発行</button></div>
+      <div id="wkKeys"></div>
+    </details>`;
+  loadFriendKeys();
+}
+function friendUrl(key){ return location.origin + location.pathname + '?key=' + encodeURIComponent(key); }
+async function loadFriendKeys(){
+  try {
+    const keys = await rpc('getWarikanKeys', [wk.id]);
+    $('wkKeys').innerHTML = keys.map(k => `<div class="line"><div class="row" style="justify-content:space-between;"><b>${esc(k.name || '（名前なし）')}</b><button class="btn small outline" data-act="revokeKey" data-key="${esc(k.key)}">停止</button></div>
+      <input readonly value="${esc(friendUrl(k.key))}" onclick="this.select()" style="margin-top:6px;font-size:12px;"></div>`).join('') || '<div class="sub">発行済みのリンクはありません</div>';
+  } catch(e) { wkErr(e.message); }
+}
+
+$('view-warikan').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act; wkErr('');
+  try {
+    if (act === 'submitPayment') return wfSubmit();
+    if (act === 'newProject') {
+      const members = $('wkNewMembers').value.split(/[、,，\s]+/).map(x => x.trim()).filter(Boolean);
+      const r = await rpc('createWarikanProject', [$('wkNewName').value, members]);
+      $('wkNewName').value = ''; $('wkNewMembers').value = '';
+      return loadWarikanProjects(r.プロジェクトID);
+    }
+    if (act === 'cancelPay') {
+      const kind = b.dataset.kind === '精算' ? '精算' : '支払い';
+      const msg = `この${kind}「${b.dataset.memo || '（内容なし）'}」を取り消します。` + (b.dataset.ledger ? '家計に入れた伝票も一緒に削除されます。' : '') + 'よろしいですか？（元に戻せません）';
+      if (!confirm(msg)) return;
+      b.disabled = true;
+      const r = await rpc('cancelWarikanPayment', [b.dataset.id]);
+      renderWarikan(r);
+      $('wfOk') && ($('wfOk').textContent = '取り消しました' + (r.cancelled && r.cancelled.ledgerRemoved ? '（家計の伝票も削除しました）' : ''));
+      return;
+    }
+    if (act === 'settle') {
+      const box = b.closest('.line'); const amt = Math.floor(Number(box.querySelector('.st-amt').value)) || 0;
+      const from = b.dataset.from, to = b.dataset.to;
+      if (amt <= 0) throw new Error('精算額を入れてください');
+      if (!confirm(`${from} → ${to}　${yen(amt)} を「送金済み」にします。よろしいですか？`)) return;
+      b.disabled = true;
+      const led = wk.detail.ledger;
+      const post = !!(led && led.ready && (from === led.myName || to === led.myName));
+      const r = await rpc('settleWarikan', [wk.id, from, to, amt, { postToLedger: post, clientId: newClientId() }]);
+      renderWarikan(r);
+      if (r.ledgerError) wkErr('精算は記録しましたが、家計への反映に失敗しました：' + r.ledgerError);
+      return;
+    }
+    if (act === 'addPerson') {
+      const el = $('wkNewMembers'); const cur = el.value.split(/[、,，\s]+/).map(x => x.trim()).filter(Boolean);
+      if (cur.indexOf(b.dataset.name) < 0) cur.push(b.dataset.name);
+      el.value = cur.join('、'); return;
+    }
+    if (act === 'postOne') { await rpc('postWarikanPayment', [b.dataset.id]); return loadWarikanDetail(wk.id); }
+    if (act === 'postAll') {
+      const r = await rpc('postWarikanPayments', [wk.id]); renderWarikan(r.project);
+      if (r.errors.length) wkErr('反映できなかった分：' + r.errors.join(' / '));
+      return;
+    }
+    if (act === 'toggleStatus') { const d = await rpc('setWarikanStatus', [wk.id, b.dataset.next]); await loadWarikanProjects(wk.id); return; }
+    if (act === 'addMember') { const d = await rpc('addWarikanMember', [wk.id, $('wkAddName').value]); renderWarikan(d); return; }
+    if (act === 'issueKey') { await rpc('issueWarikanKey', [wk.id, $('wkKeyName').value]); $('wkKeyName').value = ''; return loadFriendKeys(); }
+    if (act === 'revokeKey') { if (!confirm('このリンクを使えなくします。よろしいですか？')) return; await rpc('revokeWarikanKey', [b.dataset.key]); return loadFriendKeys(); }
+  } catch(err) { wkErr(err.message); }
+});
+$('view-warikan').addEventListener('input', (e) => {
+  if (e.target.closest('#wkForm')) wfRefresh();
+});
+$('view-warikan').addEventListener('change', (e) => {
+  if (e.target.closest('#wkForm')) wfRefresh();
+});
+
+// ---- 設定（率・年払い固定費・ローン） ----
+function accName(id){ const a = (accountsCache || []).find(x => x.勘定科目ID === id); return a ? a.勘定科目名 : ''; }
+async function loadSettingsView(){
+  const err = document.getElementById('stErr'); err.textContent = '';
+  try {
+    const st = await rpc('getSettings', []);
+    document.getElementById('stSave').value = +(st.貯蓄率 * 100).toFixed(2);
+    document.getElementById('stInvest').value = +(st.投資率 * 100).toFixed(2);
+    document.getElementById('stExp').value = +(st.期待利回り * 100).toFixed(2);
+    document.getElementById('stStart').value = st.集計開始月 || '';
+    const accs = await ensureAccounts();
+    document.getElementById('anAcc').innerHTML = accs.filter(a => a.分類 === '費用').map(a => `<option value="${a.勘定科目ID}">${esc(a.勘定科目名)}</option>`).join('');
+    const ann = await rpc('getAnnualFixed', []);
+    document.getElementById('annList').innerHTML = ann.map(a =>
+      `<div class="line row" style="justify-content:space-between;"><span>${esc(a.名称)}　${yen(a.年額)}／初回 ${a.初回支払月}／積立開始 ${a.積立開始月}／${esc(accName(a.勘定科目ID))}</span><button class="btn small outline" data-del-ann="${a.ID}">削除</button></div>`).join('') || '<div class="sub">未登録</div>';
+    const ln = await rpc('getLoans', []);
+    document.getElementById('loanList').innerHTML = ln.loans.map(L => {
+      const total = L.schedule.reduce((a, s) => a + (Number(s.返済額) || 0), 0);
+      return `<div class="line" data-loan-box="${esc(L.ローンID)}" data-principal="${L.借入額}"><div class="row" style="justify-content:space-between;"><b>${esc(L.名称)}</b><span class="sub">${esc(L.状態)}</span></div>
+       <div class="sub">${yen(L.借入額)}／${L.借入月}借入／${L.返済回数}回／年利${(L.年利*100).toFixed(2)}%</div>
+       <details><summary>返済表を編集（返済合計 ${yen(total)}）</summary>
+         ${L.schedule.map(s => `<div class="row" style="margin-top:6px;"><span style="flex:1;font-size:13px;">${s.回}回目　${s.対象月}</span><input type="number" class="ls-amt" data-n="${s.回}" value="${Number(s.返済額) || 0}" min="0" step="1" style="flex:1;"></div>`).join('')}
+         <div class="sub ls-sum" style="margin-top:8px;"></div>
+         <div class="row" style="margin-top:6px;"><button class="btn small" data-save-sched="${esc(L.ローンID)}">返済表を保存</button><span class="ok ls-msg"></span></div>
+         <div class="note">利息を含めた実際の返済額に直してもかまいません。変更は翌月以降の「投資予定額からの取り崩し」に反映されます。</div>
+       </details>
+       <button class="btn small outline" data-del-loan="${esc(L.ローンID)}" style="margin-top:8px;">ローンを削除</button></div>`;
+    }).join('') || '<div class="sub">未登録</div>';
+    document.querySelectorAll('[data-loan-box]').forEach(updateSchedSum);
+
+    // 割り勘の家計反映設定
+    const opt = (list, sel) => '<option value="">（選択してください）</option>' + list.map(a => `<option value="${esc(a.勘定科目ID)}"${a.勘定科目ID === sel ? ' selected' : ''}>${esc(a.勘定科目名)}</option>`).join('');
+    document.getElementById('lgMe').value = st['割り勘_自分の名前'] || '';
+    document.getElementById('lgExp').innerHTML = opt(accs.filter(a => a.分類 === '費用'), st['割り勘_費用科目ID']);
+    document.getElementById('lgRec').innerHTML = opt(accs.filter(a => a.分類 === '資産' || a.分類 === '負債'), st['割り勘_立替金科目ID']);
+    document.getElementById('lgPay').innerHTML = opt(accs.filter(a => a.分類 === '資産' || a.分類 === '負債'), st['割り勘_支払元科目ID']);
+    loadArchiveStatus();
+    // 他アプリ連携
+    document.getElementById('svUrl').value = APP_URL;
+    const sv = await rpc('getServiceKeys', []);
+    document.getElementById('svList').innerHTML = sv.map(k => `<div class="line"><div class="row" style="justify-content:space-between;"><b>${esc(k.name)}</b><button class="btn small outline" data-sact="svRevoke" data-key="${esc(k.key)}">停止</button></div>
+      <input readonly value="${esc(k.key)}" onclick="this.select()" style="margin-top:6px;font-size:12px;"><div class="sub">発行 ${esc(k.created)}　最終利用 ${esc(k.lastUsed || '（まだ）')}</div></div>`).join('') || '<div class="sub">発行済みのキーはありません</div>';
+    const ppl = await rpc('getPeople', []);
+    document.getElementById('ppText').value = ppl.map(x => x.name).join('\n');
+    if (!document.getElementById('arMonth').value) {
+      const d = new Date(); d.setMonth(d.getMonth() - 12);
+      document.getElementById('arMonth').value = d.toISOString().slice(0, 7);
+    }
+  } catch(e) { err.textContent = e.message; }
+}
+document.getElementById('stSaveBtn').onclick = async () => {
+  const msg = document.getElementById('stMsg'); msg.textContent = '';
+  try {
+    await rpc('saveSettings', [{
+      貯蓄率: Number(document.getElementById('stSave').value) / 100,
+      投資率: Number(document.getElementById('stInvest').value) / 100,
+      期待利回り: Number(document.getElementById('stExp').value) / 100,
+      集計開始月: document.getElementById('stStart').value
+    }]);
+    msg.textContent = '保存しました'; loadSummary();
+  } catch(e) { document.getElementById('stErr').textContent = e.message; }
+};
+document.getElementById('anAdd').onclick = async () => {
+  try {
+    await rpc('saveAnnualFixed', [{ 名称: document.getElementById('anName').value, 年額: Number(document.getElementById('anAmt').value),
+      初回支払月: document.getElementById('anFirst').value, 積立開始月: document.getElementById('anStart').value,
+      勘定科目ID: document.getElementById('anAcc').value }]);
+    ['anName','anAmt','anFirst','anStart'].forEach(i => document.getElementById(i).value = '');
+    loadSettingsView(); loadSummary();
+  } catch(e) { document.getElementById('stErr').textContent = e.message; }
+};
+document.getElementById('lnAdd').onclick = async () => {
+  try {
+    await rpc('saveLoan', [{ 名称: document.getElementById('lnName').value, 借入額: Number(document.getElementById('lnAmt').value),
+      借入月: document.getElementById('lnMonth').value, 返済回数: Number(document.getElementById('lnN').value),
+      年利: Number(document.getElementById('lnRate').value) / 100 }]);
+    ['lnName','lnAmt','lnMonth','lnN','lnRate'].forEach(i => document.getElementById(i).value = '');
+    loadSettingsView(); loadSummary();
+  } catch(e) { document.getElementById('stErr').textContent = e.message; }
+};
+document.getElementById('view-settings').addEventListener('click', async (e) => {
+  const a = e.target.dataset.delAnn, l = e.target.dataset.delLoan;
+  if (!a && !l) return;
+  if (!confirm('削除しますか？')) return;
+  try { await rpc(a ? 'deleteAnnualFixed' : 'deleteLoan', [a || l]); loadSettingsView(); loadSummary(); }
+  catch(err) { document.getElementById('stErr').textContent = err.message; }
+});
+
+function updateSchedSum(box){
+  const principal = Number(box.dataset.principal) || 0;
+  const sum = Array.from(box.querySelectorAll('.ls-amt')).reduce((a, x) => a + (Number(x.value) || 0), 0);
+  const diff = sum - principal;
+  box.querySelector('.ls-sum').textContent = `返済合計 ${yen(sum)} ／ 借入額 ${yen(principal)}` + (diff === 0 ? '（一致）' : `（借入額との差 ${diff > 0 ? '+' : ''}${yen(diff)}）`);
+}
+document.getElementById('view-settings').addEventListener('input', (e) => {
+  if (e.target.classList.contains('ls-amt')) updateSchedSum(e.target.closest('[data-loan-box]'));
+});
+document.getElementById('view-settings').addEventListener('click', async (e) => {
+  const id = e.target.dataset.saveSched; if (!id) return;
+  const box = e.target.closest('[data-loan-box]');
+  const msg = box.querySelector('.ls-msg'); msg.textContent = '';
+  try {
+    const items = Array.from(box.querySelectorAll('.ls-amt')).map(x => ({ 回: Number(x.dataset.n), 返済額: Math.floor(Number(x.value)) || 0 }));
+    await rpc('saveLoanSchedule', [id, items]);
+    msg.textContent = '保存しました';
+    loadSummary();
+  } catch(err) { document.getElementById('stErr').textContent = err.message; }
+});
+
+// ---- 設定：割り勘の家計反映／他アプリ連携／アーカイブ ----
+document.getElementById('lgSave').onclick = async () => {
+  const m = document.getElementById('lgMsg'); m.textContent = '';
+  try {
+    await rpc('saveSettings', [{ '割り勘_自分の名前': document.getElementById('lgMe').value.trim(), '割り勘_費用科目ID': document.getElementById('lgExp').value,
+      '割り勘_立替金科目ID': document.getElementById('lgRec').value, '割り勘_支払元科目ID': document.getElementById('lgPay').value }]);
+    m.textContent = '保存しました';
+  } catch(e) { document.getElementById('stErr').textContent = e.message; }
+};
+document.getElementById('svIssue').onclick = async () => {
+  try { await rpc('issueServiceKey', [document.getElementById('svName').value]); document.getElementById('svName').value = ''; loadSettingsView(); }
+  catch(e) { document.getElementById('stErr').textContent = e.message; }
+};
+document.getElementById('ppSave').onclick = async () => {
+  const m = document.getElementById('ppMsg'); m.textContent = '';
+  try {
+    const names = document.getElementById('ppText').value.split(/\n/).map(x => x.trim()).filter(Boolean);
+    const r = await rpc('syncPeople', [names]); m.textContent = r.length + '人を保存しました'; peopleCache = null;
+  } catch(e) { document.getElementById('stErr').textContent = e.message; }
+};
+document.getElementById('view-settings').addEventListener('click', async (e) => {
+  if (e.target.dataset.sact !== 'svRevoke') return;
+  if (!confirm('このキーを使えなくします。連携先が動かなくなります。よろしいですか？')) return;
+  try { await rpc('revokeServiceKey', [e.target.dataset.key]); loadSettingsView(); }
+  catch(err) { document.getElementById('stErr').textContent = err.message; }
+});
+async function archiveCall(dry){
+  const out = document.getElementById('arResult'); out.textContent = ''; document.getElementById('stErr').textContent = '';
+  const ym = document.getElementById('arMonth').value;
+  if (!ym) { out.textContent = '月を選んでください'; return; }
+  try {
+    const r = await rpc('archiveOldEntries', [ym, dry]);
+    if (!r.entries) { out.textContent = ym + ' より前の取引はありません'; document.getElementById('arRun').disabled = true; return; }
+    if (dry) {
+      out.textContent = `${r.oldest} 〜 ${r.newest}（${r.months}か月）の 伝票 ${r.entries}件・明細 ${r.lines}件を退避します。問題なければ「退避する」を押してください。`;
+      document.getElementById('arRun').disabled = false;
+    } else {
+      out.textContent = `退避しました：伝票 ${r.entries}件・明細 ${r.lines}件。今月の残りの数字は変わりません。`;
+      document.getElementById('arRun').disabled = true; loadSummary(); loadArchiveStatus();
+    }
+  } catch(err) { document.getElementById('stErr').textContent = err.message; }
+}
+document.getElementById('arDry').onclick = () => archiveCall(true);
+document.getElementById('arMonth').addEventListener('input', () => { document.getElementById('arRun').disabled = true; });
+document.getElementById('arRun').onclick = () => { if (confirm('古い取引を別シートへ退避します（数字は変わりません）。よろしいですか？')) archiveCall(false); };
+
+async function loadArchiveStatus(){
+  try {
+    const a = await rpc('getArchiveStatus', []);
+    document.getElementById('arStatus').textContent = a.entries ? `退避済み：${a.oldest} 〜 ${a.newest}（${a.months.length}か月・伝票 ${a.entries}件）` : '退避済みの取引はありません';
+  } catch(e) { /* 表示だけなので無視 */ }
+}
+async function restoreCall(dry){
+  const out = document.getElementById('arRResult'); out.textContent = ''; document.getElementById('stErr').textContent = '';
+  try {
+    const r = await rpc('restoreArchive', [document.getElementById('arRestoreMonth').value, dry]);
+    if (!r.entries) { out.textContent = '戻す対象の取引はありません'; document.getElementById('arRRun').disabled = true; return; }
+    if (dry) {
+      out.textContent = `${r.oldest} 〜 ${r.newest}（${r.months}か月）の 伝票 ${r.entries}件・明細 ${r.lines}件を本体へ戻します。`;
+      document.getElementById('arRRun').disabled = false;
+    } else {
+      out.textContent = `戻しました：伝票 ${r.entries}件・明細 ${r.lines}件。`;
+      document.getElementById('arRRun').disabled = true; loadSummary(); loadArchiveStatus();
+    }
+  } catch(err) { document.getElementById('stErr').textContent = err.message; }
+}
+document.getElementById('arRDry').onclick = () => restoreCall(true);
+document.getElementById('arRestoreMonth').addEventListener('input', () => { document.getElementById('arRRun').disabled = true; });
+document.getElementById('arRRun').onclick = () => { if (confirm('退避した取引を本体へ戻します。よろしいですか？')) restoreCall(false); };
+</script>
+</body>
+</html>
