@@ -359,13 +359,19 @@ async function rpc(method, args){
   const text = await res.text();
   let json; try { json = JSON.parse(text); } catch(e){ throw new Error('サーバーの応答を読み取れません'); }
   if (json.n && json.n !== n) throw new Error('別のリクエストの応答が返りました。もう一度お試しください');
-  if (!json.ok) throw new Error(json.error || '不明なエラー');
+  if (!json.ok) {
+    const msg = json.error || '不明なエラー';
+    // 画面が新しくサーバーが古いと、まだ無い機能を呼んで「不正なメソッド」になる
+    if (/不正なメソッドです/.test(msg)) throw new Error(msg + '。サーバー（Apps Script）が古い版のままです。最新の Code.gs を貼り、「デプロイを管理」→ 編集 →「新しいバージョン」でデプロイし直してください');
+    throw new Error(msg);
+  }
   if (json.m !== method) throw new Error('送信内容がサーバーへ届きませんでした');
   return json.result;
 }
 
 // ---- キーゲート ----
 let ME = { mode: 'owner' };
+const NEED_SERVER_BUILD = 16;   // この画面が必要とするサーバーの版（Code.gs の SERVER_BUILD）
 async function showApp(){
   const gateErr = document.getElementById('gateErr');
   try {
@@ -378,6 +384,15 @@ async function showApp(){
     return;
   }
   document.getElementById('gate').classList.add('hidden');
+  if (ME.mode === 'owner' && !(Number(ME.build) >= NEED_SERVER_BUILD)) {
+    const bar = document.createElement('div');
+    bar.id = 'oldServer';
+    bar.className = 'card';
+    bar.style.cssText = 'background:#fff4e5;border:1px solid #f0b46a;margin-top:0;';
+    bar.innerHTML = '<b>⚠️ サーバーが古い版のままです</b><div class="sub" style="margin-top:4px;line-height:1.7;">画面は v1.16 ですが、Apps Script は ' + (ME.build ? 'v1.' + ME.build : 'v1.15 以前') +
+      ' です。このままだと伝票の編集・削除などが動きません。Apps Script に最新の Code.gs を貼って保存し、「デプロイ」→「デプロイを管理」→ 鉛筆（編集）→ バージョン「新しいバージョン」→「デプロイ」をしてください。</div>';
+    document.getElementById('app').prepend(bar);
+  }
   document.getElementById('app').classList.remove('hidden');
   if (ME.mode === 'friend') {
     // 友人キー：割り勘の自分のプロジェクトだけを見せる
