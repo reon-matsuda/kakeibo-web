@@ -147,6 +147,78 @@
   .chart svg{display:block;width:100%;height:auto;touch-action:pan-y;}
   .chart .tip{position:absolute;top:0;pointer-events:none;background:#1d2433;color:#fff;font-size:11px;line-height:1.5;padding:5px 8px;border-radius:6px;white-space:nowrap;font-variant-numeric:tabular-nums;}
   .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--sub);margin-top:6px;}
+  /* ---- v1.24：色づけ（白いカードの静けさはそのまま、家計簿らしい色を少しだけ） ---- */
+  :root{--accent:#2563c9;--accent-2:#14a38b;--accent-weak:#eaf1fd;--warm:#f7a541;--warm-weak:#fff5e6;--green:#17915f;--green-weak:#e7f6ef;--red:#d14343;--red-weak:#fdecec;}
+  body{background:linear-gradient(180deg,#eef3fb 0,#f3f5f9 220px) fixed;}
+  header{border-bottom:none;box-shadow:0 1px 0 var(--line);}
+  header::after{content:'';position:absolute;left:0;right:0;bottom:-3px;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent-2) 60%,var(--warm));}
+  header h1{display:flex;align-items:center;gap:8px;}
+  header h1::before{content:'¥';display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;font-size:15px;font-weight:800;}
+  .sec{display:flex;align-items:center;gap:6px;}
+  .sec::before{content:'';flex:0 0 auto;width:4px;height:14px;border-radius:2px;background:linear-gradient(180deg,var(--accent),var(--accent-2));}
+  .card.hero{background:linear-gradient(135deg,#ffffff 0%,#f2f7ff 60%,#eefaf6 100%);border:1px solid #e1eaf8;}
+  .btn{background:linear-gradient(180deg,#2f6fd6,var(--accent));box-shadow:0 1px 2px rgba(37,99,201,.25);}
+  .btn:hover{filter:brightness(1.05);}
+  .btn.outline{background:var(--accent-weak);border-color:#c5d8f6;color:var(--accent);box-shadow:none;}
+  .btn.outline:hover{background:#dde9fc;}
+  .btn:disabled{background:#b8c0cc;box-shadow:none;filter:none;}
+  .btn.danger,.btn.outline.danger{background:var(--red-weak);border:1px solid #f3c2c2;color:var(--red);}
+  .btn.ok{background:linear-gradient(180deg,#1fa06b,var(--green));}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,201,.15);}
+  .stat{background:#f6f8fc;border-left:3px solid #d4e1f6;}
+  button.stat:hover,button.stat:focus-visible{background:var(--accent-weak);}
+  .pill{background:var(--accent-weak);}
+  .pill.warm{background:var(--warm-weak);color:#a8620a;}
+  .plus{color:var(--green);} .minus{color:var(--red);}
+  .tabbar button.active{color:var(--accent);}
+  .tabbar button.active svg{background:var(--accent-weak);border-radius:10px;padding:2px 10px;width:42px;box-sizing:content-box;}
+  .fab{background:linear-gradient(135deg,var(--accent),var(--accent-2));}
+  .line{background:#fff;}
+  #lsSeg button.on,.seg button.on{background:linear-gradient(180deg,#2f6fd6,var(--accent));}
+  .grp{color:var(--accent);font-weight:700;}
+  /* PCでは横に広がりすぎないように、真ん中にそろえる */
+  @media (min-width:760px){
+    [id^="view-"]{max-width:720px;margin-left:auto !important;margin-right:auto !important;}
+    header h1{max-width:688px;margin:0 auto;}
+  }
+  /* 詳細画面（口座・伝票・科目の編集など）：PCでは画面の真ん中に出す */
+  @media (min-width:640px){
+    .sheet-box{top:50%;bottom:auto;left:50%;width:560px;max-height:86vh;transform:translate(-50%,-50%);border-radius:16px;box-shadow:0 20px 50px rgba(16,24,40,.25);padding-bottom:20px;}
+  }
+  /* 科目を探す */
+  .pk-item{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;padding:10px 4px;border:none;border-bottom:1px solid var(--line);background:none;font:inherit;text-align:left;cursor:pointer;}
+  .pk-item:hover{background:var(--accent-weak);}
+  .pk-item .meta{font-size:11px;color:var(--sub);}
+  .ln-find{flex:0 0 auto;}
+  #inSuggest{margin-top:6px;font-size:12px;color:var(--green);background:var(--green-weak);border-radius:8px;padding:6px 10px;}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:30;background:#1d2433;color:#fff;font-size:13px;padding:10px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2);display:flex;gap:10px;align-items:center;max-width:92vw;}
+  .toast button{background:none;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;}
+  /* 割り勘：Walica のような文の形の入力 */
+  .wsent{margin-top:10px;background:#fbfcfe;border:1px solid var(--line);border-radius:14px;padding:12px;}
+  .wsent .wrow{display:flex;align-items:center;gap:8px;margin-top:10px;}
+  .wsent .wrow:first-child{margin-top:0;}
+  .wsent .wj{font-weight:800;font-size:16px;white-space:nowrap;}
+  .wsent select,.wsent input{border-radius:12px;padding:12px;font-size:16px;}
+  .wsent .wyen{font-weight:700;font-size:18px;color:var(--sub);}
+  .wmembers{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px;}
+  .wchk{display:flex;align-items:center;gap:8px;font-size:16px;color:var(--ink);margin:0;cursor:pointer;}
+  .wchk input{width:22px;height:22px;accent-color:#e97a5f;}
+  .wk-todo{border:1px solid #f3d7a3;background:var(--warm-weak);border-radius:12px;padding:10px 12px;margin-top:12px;}
+  .wk-todo .line{background:#fff;}
+  /* 出金伝票の印刷 */
+  #printArea{display:none;}
+  @media print{
+    body.printing > *:not(#printArea){display:none !important;}
+    body.printing{background:#fff !important;padding:0;}
+    body.printing #printArea{display:block;}
+  }
+  .slip{font-family:"Hiragino Mincho ProN","Yu Mincho",serif;color:#111;border:2px solid #b33;padding:18px 20px;max-width:640px;margin:0 auto;}
+  .slip h2{text-align:center;letter-spacing:.6em;color:#b33;margin:0 0 10px;font-size:22px;}
+  .slip table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px;}
+  .slip th,.slip td{border:1px solid #b33;padding:6px 8px;text-align:left;vertical-align:top;}
+  .slip th{background:#fbeaea;color:#b33;font-weight:600;width:22%;white-space:nowrap;}
+  .slip .amt{text-align:right;font-size:16px;font-weight:700;}
+  .slip .stamp{display:inline-block;width:64px;height:64px;border:1px solid #b33;margin-left:6px;vertical-align:top;text-align:center;font-size:11px;color:#b33;}
 </style>
 
 </head>
@@ -249,6 +321,7 @@
 <!-- 口座（v1.8） -->
 <div id="view-accounts" class="hidden">
   <div id="acWarn"></div>
+  <div class="card" style="padding:10px 16px;"><input id="acQ" type="search" placeholder="🔍 口座・科目を検索（スペースで区切ると全部を含むもの）" autocomplete="off"></div>
   <div class="card hero">
     <div class="row" style="justify-content:space-between;"><span class="sub">資産総額（資産 − 負債）</span><button class="btn small outline" id="acReload">更新</button></div>
     <div class="big" id="acNet">－</div>
@@ -291,6 +364,7 @@
   <input type="date" id="inDate">
   <label>摘要</label>
   <input type="text" id="inMemo" placeholder="例：スーパーで食材">
+  <div id="inSuggest" class="hidden" aria-live="polite"></div>
   <button class="btn outline small" id="inSalStart" style="margin-top:10px;">給与明細から入力（額面・天引きから伝票を作る）</button>
   <div id="inBizAsk" class="line hidden" style="background:#fff8e1;border-color:#ffe082;font-size:13px;line-height:1.7;">業務委託などの<b>報酬（事業・雑所得）</b>です。報酬から<b>所得税（10.21%）や振込手数料</b>が引かれて振り込まれていませんか？
     <div class="row" style="flex-wrap:wrap;margin-top:6px;"><button type="button" class="btn small" id="inBizUse">引かれている → 報酬の明細で入れる</button></div>
@@ -332,7 +406,7 @@
   <div id="inTips"></div>
   <div id="inSplit"></div>
   <div id="inBizMemoBox" class="sal hidden">
-    <b style="font-size:13px;">副業の交際費・会議費：相手と目的を残す</b>
+    <b style="font-size:13px;">事業用の交際費・会議費：相手と目的を残す</b>
     <div class="note" style="margin-top:2px;line-height:1.6;">経費になるかは「あとで他人に説明できるか」で決まります。その場で書いておくのがいちばん確実です。</div>
     <label>相手（名前・立場）<span class="minus">*</span></label><input type="text" id="bmWho" placeholder="例：〇〇さん（△△社の担当）、ほか2名">
     <label>目的・話した案件<span class="minus">*</span></label><input type="text" id="bmWhat" placeholder="例：□□イベントの企画の打ち合わせ">
@@ -372,7 +446,7 @@
       <p style="margin:6px 0;"><b>例：本業の給与400万円＋副業60万円</b><br>
         ・副業が<b>給与</b>なら：給与は合わせて460万円。給与所得控除は 124万円 → 136万円 に12万円増えるだけなので、もうけは <b>48万円</b> 増えます。副業の交通費を使っても変わりません。<br>
         ・副業が<b>業務委託の報酬</b>なら：60万円 − 実際の経費（たとえば10万円）＝ もうけは <b>50万円</b>。経費が多いほど税金が減ります。</p>
-      <p style="margin:10px 0 4px;"><b>経費にできるもの・できないもの</b>　経費にできるのは、<b>副業の売上を得るために使った分だけ</b>です。副業の科目に入れたものが全部経費になるわけではありません。</p>
+      <p style="margin:10px 0 4px;"><b>経費にできるもの・できないもの</b>　経費にできるのは、<b>事業の売上を得るために使った分だけ</b>です。事業用の科目に入れたものが全部経費になるわけではありません。</p>
       <table class="nw" style="font-size:12px;"><thead><tr><th>科目</th><th>経費にできる</th><th>できない</th></tr></thead><tbody>
         <tr><td>交際費</td><td style="white-space:normal;text-align:left;">仕事の相手との飲食・手土産</td><td style="white-space:normal;text-align:left;">友人・家族との飲み会</td></tr>
         <tr><td>会議費</td><td style="white-space:normal;text-align:left;">打ち合わせの飲食・会場代</td><td style="white-space:normal;text-align:left;">1人の食事・喫茶</td></tr>
@@ -381,7 +455,7 @@
         <tr><td>消耗品・本</td><td style="white-space:normal;text-align:left;">仕事で使う物・仕事に必要な本</td><td style="white-space:normal;text-align:left;">私物・趣味の本</td></tr>
         <tr><td>服・美容・食費</td><td style="white-space:normal;text-align:left;">（仕事専用の衣装など、ごく一部）</td><td style="white-space:normal;text-align:left;">ふつうはできない</td></tr>
       </tbody></table>
-      <p style="margin:6px 0;">仕事と私用が混ざる支払い（スマホ代など）は、明細を2行に分けて、仕事の分だけを副業の科目（事業区分「副業」）にします。摘要に相手や目的を書き、領収書を残しておくと、あとで説明できて安心です。</p>
+      <p style="margin:6px 0;">仕事と私用が混ざる支払い（スマホ代など）は、明細を2行に分けて、仕事の分だけを事業用の科目（事業区分「事業用」）にします。摘要に相手や目的を書き、領収書を残しておくと、あとで説明できて安心です。</p>
       <p style="margin:12px 0 4px;"><b>仕事相手との飲食：経費にしていいか迷うとき</b></p>
       <div data-guide="meeting"></div>
       <p style="margin:6px 0;"><b>個人で業務委託契約を結んで働いている場合</b>は、ふつう「事業・雑所得」です。ただし決め手は契約書の名前ではなく実際の働き方で、指示どおり決まった時間に働き、時間で報酬が決まるなど給与に近いときは給与になることもあります。迷ったら、相手に「源泉徴収票が出るか」を聞いてください。</p>
@@ -462,10 +536,10 @@
   <hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">
   <strong>割り勘を家計に反映する設定</strong>
   <label>自分の名前（割り勘のメンバー名と同じ表記）</label><input id="lgMe" placeholder="例：自分">
-  <label>費用の科目（自分の負担額が入る。種別は変動費などに）</label><select id="lgExp"></select>
-  <label>支払元の口座（普段お金が出る口座）</label><select id="lgPay"></select>
+  <select id="lgExp" class="hidden" aria-hidden="true"></select>
+  <label>いつもの支払元（割り勘を家計に入れるとき、最初に選ばれる口座）</label><select id="lgPay"></select>
   <div class="row" style="margin-top:8px;"><button class="btn small" id="lgSave">保存</button><span class="ok" id="lgMsg"></span></div>
-  <div class="note">割り勘の支払いを登録すると、家計の伝票を1枚つくります。自分の負担額だけが自由費を減らします。相手の分を立て替えた額・立て替えてもらった額は、<b>相手の名前の口座</b>（「口座」タブの「貸し借り（人）」）に入り、その残高が「貸している額（マイナスなら借りている額）」になります。相手の口座が無ければ、割り勘のメンバー名で自動で作ります。実際に送金したら、精算プランの「送金済みにする」を押すと、相手の口座と支払元の口座の伝票を作ります。</div>
+  <div class="note">費用の科目（食費・交際費など）は、割り勘を家計に入れるときに1件ずつ選びます（割り勘タブの「家計にまだ入れていない割り勘」）。家計の伝票は支払い1件につき1枚で、自分の負担額だけが自由費を減らします。相手の分を立て替えた額・立て替えてもらった額は、<b>相手の名前の口座</b>（「口座」タブの「貸し借り（人）」）に入り、その残高が「貸している額（マイナスなら借りている額）」になります。相手の口座が無ければ、割り勘のメンバー名で自動で作ります。実際に送金したら、精算プランの「送金済みにする」を押すと、相手の口座と支払元の口座の伝票を作ります。</div>
 
   <hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">
   <strong>他アプリとの連携</strong>
@@ -553,6 +627,7 @@
 </nav>
 
 
+<div id="printArea"></div>
 <script src="config.js"></script>
 <script>
 const APP_URL = (window.KAKEIBO_CONFIG && window.KAKEIBO_CONFIG.apiUrl) || '';
@@ -591,7 +666,7 @@ async function rpc(method, args){
 
 // ---- キーゲート ----
 let ME = { mode: 'owner' };
-const NEED_SERVER_BUILD = 23;   // この画面が必要とするサーバーの版（Code.gs の SERVER_BUILD）
+const NEED_SERVER_BUILD = 24;   // この画面が必要とするサーバーの版（Code.gs の SERVER_BUILD）
 async function showApp(){
   const gateErr = document.getElementById('gateErr');
   try {
@@ -610,7 +685,7 @@ async function showApp(){
     bar.id = 'oldServer';
     bar.className = 'card';
     bar.style.cssText = 'background:#fff4e5;border:1px solid #f0b46a;margin-top:0;';
-    bar.innerHTML = '<b>⚠️ サーバーが古い版のままです</b><div class="sub" style="margin-top:4px;line-height:1.7;">画面は v1.23 ですが、Apps Script は ' + (ME.build ? 'v1.' + ME.build : 'v1.15 以前') +
+    bar.innerHTML = '<b>⚠️ サーバーが古い版のままです</b><div class="sub" style="margin-top:4px;line-height:1.7;">画面は v1.24 ですが、Apps Script は ' + (ME.build ? 'v1.' + ME.build : 'v1.15 以前') +
       ' です。このままだと伝票の編集・削除などが動きません。Apps Script に最新の Code.gs を貼って保存し、「デプロイ」→「デプロイを管理」→ 鉛筆（編集）→ バージョン「新しいバージョン」→「デプロイ」をしてください。</div>';
     document.getElementById('app').prepend(bar);
   }
@@ -638,7 +713,9 @@ if (getKey()) { showApp(); }
 
 // ---- 画面の切り替え（v1.8） ----
 const VIEWS = ['summary', 'input', 'lists', 'accounts', 'warikan', 'settings', 'tax', 'nws', 'wish'];
+let INPUT_FROM = 'summary';
 function showView(v, opt){
+  if (v === 'input') { const cur = VIEWS.find(t => !document.getElementById('view-' + t).classList.contains('hidden')); if (cur && cur !== 'input') INPUT_FROM = cur; }
   VIEWS.forEach(t => document.getElementById('view-' + t).classList.toggle('hidden', t !== v));
   document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('active', b.dataset.tab === v));
   document.getElementById('fab').classList.toggle('hidden', !(v === 'summary' || v === 'lists' || v === 'accounts'));
@@ -937,7 +1014,7 @@ function openAccountForm0(a){
     <div id="afNwsBox" class="${v.分類 === '費用' ? '' : 'hidden'}"><label>Needs / Wants（50/30/20 の振り返りでの区分）</label><select id="afNws">${opt([['', '自動（固定費・年払い→Needs、変動費→Wants、税金→対象外）'], ['Needs', 'Needs（生活に必要）'], ['Wants', 'Wants（ほしいもの）'], ['対象外', '対象外（税金・寄附など。割合に入れない）']], v.NWS || '')}</select></div>
     <div id="afTypeBox" class="${pl ? '' : 'hidden'}"><label>種別（今月の残りのどこに数えるか）</label><select id="afType">${opt([['', '（なし＝費用なら変動費）'], ['給与収入', '給与収入'], ['副業収入', '副業収入'], ['その他収入', 'その他収入'], ['毎月固定費', '毎月固定費'], ['年払い固定費', '年払い固定費'], ['ローン', 'ローン（購入）'], ['変動費', '変動費']], v.種別)}</select></div>
     <div id="afGrpBox" class="${v.分類 === '資産' || v.分類 === '負債' ? '' : 'hidden'}"><label>グループ（口座画面での並び）</label><select id="afGrp">${grpOpts(v.分類, v.グループ)}</select></div>
-    <label>事業区分</label><select id="afSeg">${opt([['家計', '家計'], ['副業', '副業'], ['共通', '共通']], v.事業区分 || '家計')}</select>
+    <label>事業区分</label><select id="afSeg">${opt([['家計', '家計（生活のお金）'], ['副業', '事業用（個人事業・業務委託の売上と経費）'], ['共通', '共通（両方で使う口座など）']], v.事業区分 || '家計')}</select>
     <div class="note" id="afSegNote" style="margin-top:4px;"></div><div id="afWarn"></div>
     <div id="afInitBox" class="${pl ? 'hidden' : ''}"><label>初期残高（使い始めの日の残高。カードは使った額をプラスで）</label><input id="afInit" type="number" inputmode="numeric" value="${Number(v.初期残高) || 0}"></div>
     <label class="opt" style="margin-top:12px;"><input type="checkbox" class="chk" id="afHH"${v.家計反映対象 ? ' checked' : ''}>家計（今月の残り）に数える</label>
@@ -1166,7 +1243,7 @@ function renderTax(){
     row('給与の収入（本業＋源泉徴収なしの給与）', yen(a.salaryTotal)) + row('− 給与所得控除', yen(a.salaryDed)) + row('＝ 給与所得', yen(a.salaryIncome)) +
     row('副業の売上 − 経費 − 青色申告特別控除（事業・雑所得）', yen(a.bizIncome)) +
     row('（副業の売上 ' + yen(e.fromEntries.bizSales) + '・経費 ' + yen(e.fromEntries.bizExpenses) + '）', '') +
-    ((e.fromEntries.bizExpItems || []).length ? '<div class="note" style="margin:2px 0 6px;line-height:1.7;" id="txBizExp">副業の経費の内訳：' + e.fromEntries.bizExpItems.map(i => esc(i.name) + ' ' + yen(i.amount) + '（' + esc(i.reason) + '）').join('、') + '。私用のものが混ざっていたら、科目の事業区分か伝票の明細の区分を「家計」に直してください。</div>' : '') +
+    ((e.fromEntries.bizExpItems || []).length ? '<div class="note" style="margin:2px 0 6px;line-height:1.7;" id="txBizExp">事業用の経費の内訳：' + e.fromEntries.bizExpItems.map(i => esc(i.name) + ' ' + yen(i.amount) + '（' + esc(i.reason) + '）').join('、') + '。私用のものが混ざっていたら、科目の事業区分か伝票の明細の区分を「家計」に直してください。</div>' : '') +
     row('＝ 合計所得', yen(a.totalIncome), true) +
     '<div class="sub" style="margin-top:10px;">所得税</div>' +
     row('社会保険料・iDeCo等・その他', yen(e.inputs.social + e.inputs.ideco + e.inputs.otherDed)) + row('生命保険料控除', yen(a.lifeIT)) + row('地震保険料控除', yen(a.quakeIT)) +
@@ -1475,7 +1552,7 @@ document.getElementById('inNws').addEventListener('change', () => checkBalance()
 const TAXWIZ_RESULT = {
   wh: { tax: '給与（源泉徴収あり）', type: '給与収入', seg: '家計', why: '会社に雇われていて、給与から所得税が引かれている → 「給与（源泉徴収あり）」。入力は「給与明細から入力」で、額面と天引きを入れます。' },
   nowh: { tax: '給与（源泉徴収なし）', type: '副業収入', seg: '副業', why: '雇われて働く給与だけれど、所得税が引かれていない → 「給与（源泉徴収なし）」。振り込まれた額をそのまま額面として入れます。翌月の予算は、あとで払う税金の見込みを引いた手取りで組みます。' },
-  biz: { tax: '事業・雑所得', type: '副業収入', seg: '副業', why: '業務委託・請負などで、自分で仕事を受けて報酬をもらう → 「事業・雑所得」。事業区分「副業」の経費を、この収入から引けます。報酬から10.21%引かれている場合は、入力画面の「報酬の明細で入れる」を使います。' },
+  biz: { tax: '事業・雑所得', type: '副業収入', seg: '副業', why: '業務委託・請負などで、自分で仕事を受けて報酬をもらう → 「事業・雑所得」。事業区分「事業用」の経費を、この収入から引けます。報酬から10.21%引かれている場合は、入力画面の「報酬の明細で入れる」を使います。' },
   other: { tax: '非課税・対象外', type: 'その他収入', seg: '家計', why: 'ポイント・預金の利息・お祝い・返金など → 「非課税・対象外」。税金の計算には入れません（利息の税金は引かれて終わっています）。' }
 };
 function taxWizHtml(step){
@@ -1492,7 +1569,7 @@ function accFormCheck(){
   const g = id => document.getElementById(id);
   if (!g('afCls')) return;
   const c = g('afCls').value, seg = g('afSeg').value, warn = [];
-  const segNote = c === '費用' ? (seg === '副業' ? '副業の経費：業務委託などの報酬（事業・雑所得）から引きます。副業の給与からは引けません。' : '生活の支出（家計）。税金には関係しません。')
+  const segNote = c === '費用' ? (seg === '副業' ? '事業用の経費：業務委託などの報酬（事業・雑所得）から引きます。副業の給与からは引けません。' : '生活の支出（家計）。税金には関係しません。')
     : c === '収益' ? '収入の科目では計算に使いません（整理用の印）。税金での扱いは上の「税区分」で決まります。' : '口座などは計算に使いません（整理用の印）。両方で使う口座は「共通」に。';
   g('afSegNote').textContent = segNote;
   if (c === '収益') {
@@ -1503,7 +1580,7 @@ function accFormCheck(){
     if (tax === '非課税・対象外' && (type === '給与収入' || type === '副業収入')) warn.push('種別は給与・副業ですが、税区分が「非課税・対象外」です。税金の計算に入らなくなります。');
   }
   if (c === '費用' && seg === '副業' && (accountsCache || []).length && !(accountsCache || []).some(a => a.分類 === '収益' && taxClassOf(a) === '事業・雑所得'))
-    warn.push('事業・雑所得の収入の科目がまだありません。副業の経費は、業務委託などの報酬（税区分「事業・雑所得」）からしか引けません。');
+    warn.push('事業・雑所得の収入の科目がまだありません。事業用の経費は、業務委託などの報酬（税区分「事業・雑所得」）からしか引けません。');
   g('afWarn').innerHTML = warn.map(w => '<div class="line" style="background:#fff8e1;border-color:#ffe082;font-size:12px;margin-top:6px;">⚠️ ' + esc(w) + '</div>').join('');
 }
 document.getElementById('sheet').addEventListener('click', e => {
@@ -1513,7 +1590,7 @@ document.getElementById('sheet').addEventListener('click', e => {
   if (k === 'start' || k === 'salary') { box.innerHTML = taxWizHtml(k); return; }
   const r = TAXWIZ_RESULT[k]; if (!r) return;
   document.getElementById('afTax').value = r.tax; document.getElementById('afType').value = r.type; document.getElementById('afSeg').value = r.seg;
-  box.innerHTML = `<div class="ok" style="margin-top:0;line-height:1.7;">✔ 税区分「${esc(r.tax)}」・種別「${esc(r.type)}」・事業区分「${esc(r.seg)}」にしました。</div><div class="sub" style="line-height:1.7;margin-top:4px;">${esc(r.why)}</div>
+  box.innerHTML = `<div class="ok" style="margin-top:0;line-height:1.7;">✔ 税区分「${esc(r.tax)}」・種別「${esc(r.type)}」・事業区分「${esc(segLabel(r.seg))}」にしました。</div><div class="sub" style="line-height:1.7;margin-top:4px;">${esc(r.why)}</div>
     <button type="button" class="btn small outline" data-wz="start" style="margin-top:6px;">選び直す</button>`;
   accFormCheck();
 });
@@ -1544,9 +1621,9 @@ document.getElementById('acWarn').addEventListener('click', e => {
   e.stopPropagation();
   ensureAccounts().then(() => { openAccountForm(AC.accounts.find(a => a.勘定科目ID === b.dataset.acfix)); accFormCheck(); });
 });
-/* 副業の経費：科目名から「経費にできるもの・できないもの」の目安を出す（v1.19） */
+/* 事業用の経費：科目名から「経費にできるもの・できないもの」の目安を出す（v1.19） */
 const EXPENSE_HINTS = [
-  [/交際|接待|贈答|慶弔/, '仕事の相手との飲食・手土産・お祝いなど、副業の仕事に必要なものはOK。友人・家族との飲食や自分の楽しみはNG。摘要に「相手の名前・目的」を書いておくと安心です。'],
+  [/交際|接待|贈答|慶弔/, '仕事の相手との飲食・手土産・お祝いなど、仕事に必要なものはOK。友人・家族との飲食や自分の楽しみはNG。摘要に「相手の名前・目的」を書いておくと安心です。'],
   [/会議|打合|打ち合わせ/, '仕事の打ち合わせの飲食代・会場代はOK。打ち合わせでない1人の喫茶・食事は経費になりにくいです。'],
   [/交通|旅費|出張|ガソリン|駐車/, '仕事で移動した分（打ち合わせ・現地への移動）はOK。本業の通勤や私用の移動はNG。'],
   [/通信|電話|携帯|スマホ|ネット|インターネット/, '私用と兼用なら、仕事で使う割合の分だけ（家事按分）。'],
@@ -1560,7 +1637,7 @@ const EXPENSE_HINTS = [
 function expenseHint(name){ const n = String(name || ''); const h = EXPENSE_HINTS.find(x => x[0].test(n)); return h ? h[1] : ''; }
 /** 「交際費（副業）」に対する「交際費」のような、家計用の同じ種類の科目 */
 function privateTwin(a){
-  const base = String(a.勘定科目名 || '').replace(/[（(]\s*副業\s*[）)]|副業の?|_副業/g, '').trim();
+  const base = String(a.勘定科目名 || '').replace(/[（(]\s*(副業|事業用?)\s*[）)]|副業の?|_副業/g, '').trim();
   if (!base || base === a.勘定科目名) return (accountsCache || []).find(x => x.分類 === '費用' && x.勘定科目ID !== a.勘定科目ID && x.事業区分 !== '副業' && x.勘定科目名 === a.勘定科目名) || null;
   return (accountsCache || []).find(x => x.分類 === '費用' && x.勘定科目ID !== a.勘定科目ID && x.事業区分 !== '副業' && x.勘定科目名 === base) || null;
 }
@@ -1589,13 +1666,13 @@ function entryTips(){
   const bizLines = lines.filter(l => l.side === '借方' && l.amount > 0 && m[l.accountId] && m[l.accountId].分類 === '費用' && (m[l.accountId].事業区分 === '副業' || l.segment === '副業'));
   if (bizLines.length && !credIncome.length) {
     const accs = Array.from(new Set(bizLines.map(l => l.accountId))).map(id => m[id]);
-    tips.push('<b>副業の経費</b>として数えます（業務委託などの報酬＝事業・雑所得から引きます。副業の<b>給与</b>からは引けません）。<br>' +
-      '経費にできるのは、<b>副業の仕事のために使った分だけ</b>です。' +
+    tips.push('<b>事業用の経費</b>として数えます（業務委託などの報酬＝事業・雑所得から引きます。副業の<b>給与</b>からは引けません）。<br>' +
+      '経費にできるのは、<b>事業（業務委託など）の仕事のために使った分だけ</b>です。' +
       bizLines.map(l => { const a = m[l.accountId];
-        return a.事業区分 === '副業' ? '<br>（理由：この明細で選んでいる科目「' + esc(accLabel(a)) + '」の<b>事業区分が「副業」</b>になっています。' + (/副業/.test(a.勘定科目名) ? '' : '私用の支出なら、明細の科目を家計の科目に選び直すか、この科目の事業区分を「家計」に直してください。') + '）<button type="button" class="btn small outline" data-open-acc="' + esc(a.勘定科目ID) + '" style="margin:4px 0 0;">この科目を開いて確かめる</button>'
-          : '<br>（理由：「' + esc(a.勘定科目名) + '」の明細の区分を<b>「副業」</b>にしています。私用なら「家計」に戻してください。）'; }).filter((x, i, arr) => arr.indexOf(x) === i).join('') +
+        return a.事業区分 === '副業' ? '<br>（理由：この明細で選んでいる科目「' + esc(accLabel(a)) + '」の<b>事業区分が「事業用」</b>になっています。' + (/副業/.test(a.勘定科目名) ? '' : '私用の支出なら、明細の科目を家計の科目に選び直すか、この科目の事業区分を「家計」に直してください。') + '）<button type="button" class="btn small outline" data-open-acc="' + esc(a.勘定科目ID) + '" style="margin:4px 0 0;">この科目を開いて確かめる</button>'
+          : '<br>（理由：「' + esc(a.勘定科目名) + '」の明細の区分を<b>「事業用」</b>にしています。私用なら「家計」に戻してください。）'; }).filter((x, i, arr) => arr.indexOf(x) === i).join('') +
       accs.map(a => { const h = expenseHint(a.勘定科目名); const alt = privateTwin(a); return (h ? '<br>・' + esc(a.勘定科目名) + '：' + h : '') + (alt ? '<br>　私用の分なら、家計の「' + esc(alt.勘定科目名) + '」を使ってください。' : ''); }).join('') +
-      '<br>仕事と私用が混ざる支払い（スマホ代など）は、明細を2行に分けて、仕事の分だけを副業の科目にします。');
+      '<br>仕事と私用が混ざる支払い（スマホ代など）は、明細を2行に分けて、仕事の分だけを事業用の科目にします。');
   }
   renderSplit(bizLines.length && !credIncome.length ? bizLines : [], lines, m);
   const big = lines.filter(l => l.amount >= 1000000);
@@ -1604,7 +1681,7 @@ function entryTips(){
 }
 
 
-/* ---- 相手と目的（副業の交際費・会議費）v1.20.1 ---- */
+/* ---- 相手と目的（事業用の交際費・会議費）v1.20.1 ---- */
 const MEETING_RE = /交際|接待|贈答|慶弔|会議|打合|打ち合わせ/;
 function bizLinesOf(){
   const m = accById();
@@ -1631,7 +1708,7 @@ function checkMeetingMemo(el){
   document.getElementById('inBizMemoBox').classList.toggle('hidden', !need);
   if (!need) return true;
   const ok = !!document.getElementById('bmWho').value.trim() && !!document.getElementById('bmWhat').value.trim();
-  if (!ok) el.textContent += '　副業の交際費・会議費は、相手と目的を書いてください（私用なら家計の科目にします）';
+  if (!ok) el.textContent += '　事業用の交際費・会議費は、相手と目的を書いてください（私用なら家計の科目にします）';
   return ok;
 }
 ['bmWho', 'bmWhat'].forEach(id => document.getElementById(id).addEventListener('input', () => checkBalance()));
@@ -1652,7 +1729,7 @@ function renderSplit(biz, lines, m){
       <div class="row" style="flex-wrap:wrap;margin-top:4px;"><span>仕事の割合</span><input type="number" inputmode="numeric" class="sp-pct" data-idx="${i}" min="1" max="99" placeholder="50" style="width:80px;"><span>%</span></div>
       <div class="row" style="margin-top:4px;"><span style="white-space:nowrap;">私用の分の科目</span><select class="sp-acc" data-idx="${i}" style="flex:1;">${priv.map(x => `<option value="${esc(x.勘定科目ID)}"${x.勘定科目ID === dflt ? ' selected' : ''}>${esc(accLabel(x))}</option>`).join('')}</select></div>
       <button type="button" class="btn small sp-go" data-idx="${i}" style="margin-top:6px;">2行に分ける</button>
-      <div class="note" style="margin-top:2px;">仕事の分は今の科目（副業の経費）に、残りは私用の科目（家計）に入れます。割合の決め方（使った時間・回数など）も摘要に書いておくと安心です。</div></div>`;
+      <div class="note" style="margin-top:2px;">仕事の分は今の科目（事業用の経費）に、残りは私用の科目（家計）に入れます。割合の決め方（使った時間・回数など）も摘要に書いておくと安心です。</div></div>`;
   }).join('');
 }
 document.getElementById('inSplit').addEventListener('click', e => {
@@ -1927,13 +2004,14 @@ function niceTicks(lo, hi, n){
   const raw = (hi - lo) / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag;
   const step = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * mag;
   const t0 = Math.floor(lo / step) * step, out = [];
-  for (let v = t0; v <= hi + step * 0.5; v += step) out.push(Math.round(v));
+  for (let v = t0; v <= hi + step * 0.5; v += step) out.push(Math.round(v) || 0);   // -0 を 0 に
   return out;
 }
 function lineChart(el, labels, series){
   const W = Math.max(280, el.clientWidth || 320), H = 210, L = 52, R = 10, T = 12, B = 26;
   const all = series.flatMap(s => s.values);
   let lo = Math.min.apply(null, all.concat([0])), hi = Math.max.apply(null, all.concat([0]));
+  if (lo === hi) hi = lo + 1000;              // ずっと同じ額（0円など）のとき
   const ticks = niceTicks(lo, hi, 4); lo = ticks[0]; hi = ticks[ticks.length - 1];
   const n = labels.length, x = i => L + (n <= 1 ? 0 : i * (W - L - R) / (n - 1)), y = v => T + (hi - v) * (H - T - B) / (hi - lo || 1);
   const maxLab = Math.max(2, Math.floor((W - L - R) / 72) + 1), step = Math.max(1, Math.ceil((n - 1) / (maxLab - 1)));   // ラベルが重ならない数だけ出す
@@ -2001,6 +2079,215 @@ document.getElementById('arNow').onclick = async () => {
   } catch(err) { document.getElementById('stErr').textContent = err.message; } finally { b.disabled = false; }
 };
 
+// ---- 事業区分の呼び名（v1.24）：中のデータは「家計／副業／共通」のまま、画面では「家計／事業用／共通」 ----
+const SEG_LABEL = { '家計': '家計', '副業': '事業用', '共通': '共通' };
+const segLabel = v => SEG_LABEL[v] || v || '家計';
+
+// ---- 小さなお知らせ（v1.24） ----
+function toast(msg, actionLabel, action){
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status');
+  t.innerHTML = '<span>' + esc(msg) + '</span>' + (actionLabel ? '<button type="button">' + esc(actionLabel) + '</button>' : '');
+  if (actionLabel) t.querySelector('button').onclick = () => { t.remove(); action(); };
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 5000);
+}
+
+// ---- 摘要から科目を予想する（v1.24） ----
+// 1) 前に同じ（または似た）摘要で入れた伝票の科目　2) なければ、よくある言葉から費用の科目
+const SUGG = { list: null, loading: null, undo: null };
+let LINES_TOUCHED = false;           // 自分で科目を選んだら、予想で上書きしない
+function loadSuggestSource(){
+  if (SUGG.list) return Promise.resolve(SUGG.list);
+  if (!SUGG.loading) SUGG.loading = rpc('getEntries', [{ limit: 300 }]).then(r => { SUGG.list = (r && r.items || []).filter(e => !e.warikan); }).catch(() => { SUGG.list = []; }).then(() => SUGG.list);
+  return SUGG.loading;
+}
+const memoKey = m => nameKey(String(m || '').replace(/／相手：.*$/, '').replace(/（按分：.*?）/, '')).toLowerCase();
+const KEYWORDS = [
+  [/電車|バス|タクシー|新幹線|切符|きっぷ|suica|pasmo|ガソリン|駐車|高速/, ['交通費', '旅費交通費']],
+  [/スーパー|コンビニ|食材|弁当|パン|ランチ|昼食|夕食|朝食|外食|カフェ|コーヒー|珈琲|ごはん|ご飯|マック|スタバ/, ['食費']],
+  [/薬|病院|クリニック|歯医者|医院/, ['医療費']],
+  [/電気|ガス代|水道/, ['水道光熱費']],
+  [/携帯|スマホ|ネット|wi-?fi|プロバイダ/, ['通信費']],
+  [/家賃/, ['家賃', '住居費']],
+  [/本|書籍|雑誌/, ['書籍', '教養', '新聞図書費']],
+  [/服|靴|ユニクロ/, ['衣服', '被服費']],
+  [/美容|散髪|カット|ヘア/, ['美容']],
+  [/飲み会|会食|プレゼント|お祝い|手土産/, ['交際費']],
+  [/日用品|ドラッグ|洗剤|ティッシュ|トイレットペーパー/, ['日用品']]
+];
+function keywordAccount(memo){
+  const k = memoKey(memo), accs = accountsCache || [];
+  for (const [re, names] of KEYWORDS) {
+    if (!re.test(k)) continue;
+    for (const n of names) {
+      const a = accs.find(x => x.分類 === '費用' && x.事業区分 !== '副業' && nameKey(x.勘定科目名).indexOf(nameKey(n)) === 0);
+      if (a) return a;
+    }
+  }
+  return null;
+}
+let SUGG_TIMER = 0;
+async function suggestFromMemo(){
+  const box = document.getElementById('inSuggest');
+  if (EDIT || SAL.on || LINES_TOUCHED) return;
+  const rows = Array.from(document.querySelectorAll('#inLines .line'));
+  if (rows.length !== 2 || readLines().some(l => l.amount > 0)) return;      // 金額を入れたあとは変えない
+  const memo = document.getElementById('inMemo').value.trim();
+  if (!memo) { box.classList.add('hidden'); return; }
+  const list = await loadSuggestSource();
+  if (LINES_TOUCHED || document.getElementById('inMemo').value.trim() !== memo) return;
+  const k = memoKey(memo);
+  if (SUGG.appliedKey === k) return;            // 同じ摘要で2回動かない（「元に戻す」の戻り先がずれないように）
+  const simple = e => e.lines.length === 2 && e.lines.some(l => l.side === '借方') && e.lines.some(l => l.side === '貸方');
+  const hit = list.find(e => simple(e) && memoKey(e.memo) === k) || (k.length >= 2 && (list.find(e => simple(e) && memoKey(e.memo).indexOf(k) === 0) || list.find(e => simple(e) && memoKey(e.memo).indexOf(k) >= 0)));
+  const before = rows.map(r => ({ side: r.querySelector('.ln-side').value, acc: r.querySelector('.ln-account').value, seg: r.querySelector('.ln-segment').value }));
+  const m = accById();
+  let text = '';
+  if (hit) {
+    const d = hit.lines.find(l => l.side === '借方'), c = hit.lines.find(l => l.side === '貸方');
+    if (!m[d.accountId] || !m[c.accountId]) return;
+    [[rows[0], d], [rows[1], c]].forEach(([r, l]) => { r.querySelector('.ln-side').value = l.side; r.querySelector('.ln-account').value = l.accountId; r.querySelector('.ln-segment').value = l.segment || '家計'; });
+    text = '前に「' + hit.memo.replace(/／相手：.*$/, '') + '」（' + hit.date.slice(5).replace('-', '/') + '）で使った科目にしました：' + accLabel(m[c.accountId]) + ' ➜ ' + accLabel(m[d.accountId]);
+  } else {
+    const a = keywordAccount(memo);
+    if (!a) { box.classList.add('hidden'); return; }
+    const debit = rows.find(r => r.querySelector('.ln-side').value === '借方') || rows[0];
+    debit.querySelector('.ln-account').value = a.勘定科目ID;
+    text = '摘要から「' + accLabel(a) + '」を選びました';
+  }
+  if (!SUGG.undo) SUGG.undo = before;          // 予想を重ねても、戻り先は最初の状態
+  SUGG.appliedKey = k;
+  box.innerHTML = '💡 ' + esc(text) + '　<button type="button" class="btn small outline" id="inSuggestUndo">元に戻す</button>';
+  box.classList.remove('hidden');
+  checkBalance();
+}
+document.getElementById('inMemo').addEventListener('input', () => { clearTimeout(SUGG_TIMER); SUGG_TIMER = setTimeout(suggestFromMemo, 500); });
+document.getElementById('inMemo').addEventListener('change', () => { clearTimeout(SUGG_TIMER); suggestFromMemo(); });
+document.getElementById('inSuggest').addEventListener('click', e => {
+  if (e.target.id !== 'inSuggestUndo' || !SUGG.undo) return;
+  const rows = Array.from(document.querySelectorAll('#inLines .line'));
+  SUGG.undo.forEach((b, i) => { if (!rows[i]) return; rows[i].querySelector('.ln-side').value = b.side; rows[i].querySelector('.ln-account').value = b.acc; rows[i].querySelector('.ln-segment').value = b.seg; });
+  LINES_TOUCHED = true; SUGG.undo = null; SUGG.appliedKey = '';
+  document.getElementById('inSuggest').classList.add('hidden');
+  checkBalance();
+});
+// 自分で科目・借方貸方を選んだら、それ以降は予想しない
+document.getElementById('inLines').addEventListener('change', e => { if (e.isTrusted && e.target.matches('.ln-account,.ln-side')) { LINES_TOUCHED = true; document.getElementById('inSuggest').classList.add('hidden'); } });
+function resetSuggest(){ LINES_TOUCHED = false; SUGG.undo = null; SUGG.appliedKey = ''; SUGG.list = null; SUGG.loading = null; document.getElementById('inSuggest').classList.add('hidden'); }
+
+// ---- 科目を探す（v1.24）：スペースで区切ると、全部を含むものだけ ----
+function accHay(a){ return nameKey([a.勘定科目名, a.分類, a.グループ, segLabel(a.事業区分), a.種別, a.税区分].join(' ')).toLowerCase(); }
+function matchWords(hay, q){ const ws = String(q || '').split(/[\s　]+/).map(w => nameKey(w).toLowerCase()).filter(Boolean); return ws.every(w => hay.indexOf(w) >= 0); }
+let PICK = null;
+function openPicker(selectEl, filter){
+  PICK = { sel: selectEl, filter: filter || (() => true) };
+  openSheet('科目を探す', `<input id="pkQ" type="search" placeholder="名前・分類・グループで検索（スペースで区切ると全部を含むもの）" autocomplete="off"><div id="pkList" style="margin-top:8px;"></div>`);
+  renderPicker('');
+  const q = document.getElementById('pkQ'); q.addEventListener('input', () => renderPicker(q.value)); setTimeout(() => q.focus(), 50);
+}
+function renderPicker(q){
+  const ids = Array.from(PICK.sel.options).map(o => o.value);
+  const list = (accountsCache || []).filter(a => ids.indexOf(a.勘定科目ID) >= 0 && PICK.filter(a) && matchWords(accHay(a), q));
+  document.getElementById('pkList').innerHTML = list.map(a => `<button type="button" class="pk-item" data-pick="${esc(a.勘定科目ID)}"><span>${esc(accLabel(a))}<div class="meta">${esc(a.分類)}${a.グループ ? '・' + esc(a.グループ) : ''}${a.分類 === '費用' || a.分類 === '収益' ? '・' + esc(segLabel(a.事業区分)) + (a.種別 ? '・' + esc(a.種別) : '') : ''}</div></span>${a.勘定科目ID === PICK.sel.value ? '<span class="pill">選択中</span>' : ''}</button>`).join('') || '<div class="sub">見つかりません</div>';
+}
+document.getElementById('shBody').addEventListener('click', e => {
+  const b = e.target.closest('[data-pick]'); if (!b || !PICK) return;
+  PICK.sel.value = b.dataset.pick;
+  PICK.sel.dispatchEvent(new Event('input', { bubbles: true }));
+  PICK.sel.dispatchEvent(new Event('change', { bubbles: true }));
+  if (PICK.sel.closest('#inLines')) { LINES_TOUCHED = true; document.getElementById('inSuggest').classList.add('hidden'); }
+  PICK = null; closeSheet();
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('.ln-find,[data-find-for]'); if (!b) return;
+  const sel = b.classList.contains('ln-find') ? b.closest('.line').querySelector('.ln-account') : document.getElementById(b.dataset.findFor);
+  if (!sel) return;
+  ensureAccounts().then(() => openPicker(sel));
+});
+// 口座タブの検索
+function filterAccounts(q){
+  const root = document.getElementById('view-accounts');
+  root.querySelectorAll('.acc-row').forEach(r => { r.classList.toggle('hidden', !matchWords(nameKey(r.textContent + ' ' + (r.dataset.hay || '')).toLowerCase(), q)); });
+  root.querySelectorAll('.grp').forEach(g => {
+    let n = g.nextElementSibling, any = false;
+    while (n && !n.classList.contains('grp')) { if (n.classList.contains('acc-row') && !n.classList.contains('hidden')) any = true; n = n.nextElementSibling; }
+    g.classList.toggle('hidden', !!q && !any);
+  });
+}
+document.getElementById('acQ').addEventListener('input', e => filterAccounts(e.target.value));
+
+// ---- 割り勘：家計への反映（v1.24）。科目は1件ずつ自分で選ぶ ----
+function expenseOptions(sel){
+  const accs = accountsCache || [];
+  return '<option value="">科目を選ぶ</option>' + accs.filter(a => a.分類 === '費用').map(a => `<option value="${esc(a.勘定科目ID)}"${a.勘定科目ID === sel ? ' selected' : ''}>${esc(accLabel(a))}</option>`).join('');
+}
+function payFromOptions(sel){
+  const accs = accountsCache || [];
+  return accs.filter(a => (a.分類 === '資産' || a.分類 === '負債') && a.グループ !== '貸し借り（人）').map(a => `<option value="${esc(a.勘定科目ID)}"${a.勘定科目ID === sel ? ' selected' : ''}>${esc(accLabel(a))}</option>`).join('');
+}
+function todoHtml(d){
+  if (ME.mode !== 'owner' || !d.ledger) return '';
+  if (!d.ledger.ready) return '<div class="note">メニューの「割り勘を家計に反映する設定」で自分の名前を入れると、自分の分を家計の伝票に入れられます。</div>';
+  const todo = d.payments.filter(p => !p.家計伝票ID && p.種類 !== '付け替え');
+  if (!todo.length) return '';
+  return `<div class="wk-todo"><div class="sec" style="margin:0;">家計にまだ入れていない割り勘（${todo.length}件）</div>
+    <div class="sub" style="line-height:1.7;">1件ずつ科目を選んで「家計に入れる」を押します（何にいくら使ったかを分けて見られるように）。</div>
+    ${todo.map(p => { const mi = p.mine || { paid: 0, share: 0 }, none = p.種類 === '支払い' && !mi.paid && !mi.share;
+      return `<div class="line" data-todo="${esc(p.支払いID)}">
+        <div class="row" style="justify-content:space-between;"><b>${p.種類 === '精算' ? '<span class="pill done">精算</span> ' : ''}${esc(p.摘要 || '（内容なし）')}</b><span class="sub">${esc(dateOnly(p.日付))}</span></div>
+        <div class="sub">${p.種類 === '精算' ? '送金 ' + yen(p.総額) : none ? '自分は関係しない支払いです' : '自分の負担 <b>' + yen(mi.share) + '</b>' + (mi.paid ? '　自分が払った額 ' + yen(mi.paid) : '')}</div>
+        ${p.種類 === '支払い' && mi.share > 0 ? `<div class="row" style="margin-top:6px;"><select class="td-exp" id="tdExp_${esc(p.支払いID)}" style="flex:1;">${expenseOptions('')}</select><button type="button" class="btn small outline" data-find-for="tdExp_${esc(p.支払いID)}" aria-label="科目を探す">🔍</button></div>` : ''}
+        ${(p.種類 === '支払い' && mi.paid > 0) || p.種類 === '精算' ? `<div class="row" style="margin-top:6px;"><span class="sub" style="white-space:nowrap;">払った口座</span><select class="td-from" style="flex:1;">${payFromOptions(d.ledger.payFrom)}</select></div>` : ''}
+        <div class="row" style="margin-top:6px;flex-wrap:wrap;"><button class="btn small" data-act="postOne" data-id="${esc(p.支払いID)}">${none ? '対象外にする' : '家計に入れる'}</button>${p.種類 === '支払い' ? `<button class="btn small outline" data-act="slip" data-id="${esc(p.支払いID)}">出金伝票</button>` : ''}</div>
+      </div>`; }).join('')}</div>`;
+}
+
+// ---- 出金伝票（v1.24）：割り勘で領収書が出ないときの代わり ----
+function slipForm(p, d){
+  const mi = p.mine || { paid: 0, share: 0 };
+  const parts = p.lines.map(l => l.メンバー名);
+  const exp = (accountsCache || []).filter(a => a.分類 === '費用');
+  openSheet('出金伝票をつくる', `<div class="sub" style="line-height:1.7;">割り勘で領収書が出ないときの、支払いの記録です。印刷するか、印刷の画面で「PDFに保存」を選んで保存します。</div>
+    <label>日付</label><input type="date" id="slipDate" value="${esc(dateOnly(p.日付))}">
+    <label>支払先（お店の名前）</label><input id="slipTo" placeholder="例：カフェ〇〇 上越店">
+    <label>金額</label><select id="slipAmt"><option value="${mi.share}">自分の負担分 ${yen(mi.share)}</option><option value="${mi.paid}">自分が払った額 ${yen(mi.paid)}</option><option value="${p.総額}">全員の合計 ${yen(p.総額)}</option></select>
+    <label>勘定科目</label><select id="slipAcc">${exp.map(a => `<option>${esc(a.勘定科目名)}</option>`).join('')}</select>
+    <label>内容・目的</label><input id="slipWhat" value="${esc(p.摘要 || '')}" placeholder="例：〇〇の企画の打ち合わせ（会食）">
+    <label>参加者（${parts.length}名）</label><input id="slipWho" value="${esc(parts.join('、'))}">
+    <label>支払った人（作成者）</label><input id="slipBy" value="${esc(d.ledger && d.ledger.myName || '')}">
+    <div class="note">参加者・人数・目的が書いてあると、あとで経費の説明がしやすくなります。</div>
+    <button type="button" class="btn" id="slipPrint" style="margin-top:12px;width:100%;">印刷・PDFで保存</button>`);
+  const pre = exp.find(a => /交際|会議/.test(a.勘定科目名) && a.事業区分 === '副業') || exp.find(a => /交際|会議/.test(a.勘定科目名));
+  if (pre) document.getElementById('slipAcc').value = pre.勘定科目名;
+}
+function slipHtml(){
+  const g = id => document.getElementById(id).value;
+  const amt = Number(g('slipAmt')) || 0, who = g('slipWho').split(/[、,，]+/).map(x => x.trim()).filter(Boolean);
+  const dt = g('slipDate') || localToday(), [y, m, dd] = dt.split('-');
+  const no = dt.replace(/-/g, '') + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `<div class="slip"><h2>出金伝票</h2>
+    <div style="display:flex;justify-content:space-between;font-size:13px;"><span>No. ${esc(no)}</span><span>${esc(y)}年 ${Number(m)}月 ${Number(dd)}日</span></div>
+    <table>
+      <tr><th>支払先</th><td>${esc(g('slipTo') || '')}　様</td></tr>
+      <tr><th>勘定科目</th><td>${esc(g('slipAcc'))}</td></tr>
+      <tr><th>摘要</th><td>${esc(g('slipWhat'))}<br>参加者：${esc(who.join('、'))}（${who.length}名）</td></tr>
+      <tr><th>金額</th><td class="amt">${yen(amt)}</td></tr>
+      <tr><th>備考</th><td>割り勘で各自が支払ったため、領収書の発行なし。</td></tr>
+    </table>
+    <div style="margin-top:14px;font-size:13px;text-align:right;">支払者：${esc(g('slipBy'))}<span class="stamp">印</span></div></div>`;
+}
+document.getElementById('shBody').addEventListener('click', e => {
+  if (e.target.id !== 'slipPrint') return;
+  const area = document.getElementById('printArea');
+  area.innerHTML = slipHtml();
+  document.body.classList.add('printing');
+  const done = () => { document.body.classList.remove('printing'); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+  setTimeout(done, 1500);
+});
+
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function localToday(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 
@@ -2009,27 +2296,28 @@ let accountsCache = null, accountsAt = 0;
 /** 科目の一覧。別の端末で科目を直したときに古いまま使い続けないよう、2分たったら取り直す */
 async function ensureAccounts(){
   if (accountsCache && Date.now() - accountsAt < 120000) return accountsCache;
-  accountsCache = await rpc('getAccounts', []); accountsAt = Date.now();
+  accountsCache = (await rpc('getAccounts', [])) || []; accountsAt = Date.now();   // 空でも「取った」ことにする（取り直しを繰り返さない）
   return accountsCache;
 }
 const nameKey = n => String(n || '').normalize('NFKC').replace(/\s+/g, '');
-/** 選択肢に出す名前：副業の科目には［副業］を付ける。同じ名前の科目が2つあれば分類・事業区分も添える */
+/** 選択肢に出す名前：事業用の科目には［副業］を付ける。同じ名前の科目が2つあれば分類・事業区分も添える */
 function accLabel(a, accs){
   const n = String(a.勘定科目名 || '');
   const dup = (accs || accountsCache || []).filter(x => nameKey(x.勘定科目名) === nameKey(n)).length > 1;
-  if (dup) return n + '［' + (a.分類 || '') + '・' + (a.事業区分 || '家計') + '］';
-  return a.事業区分 === '副業' && !/副業/.test(n) ? n + '［副業］' : n;
+  if (dup) return n + '［' + (a.分類 || '') + '・' + segLabel(a.事業区分) + '］';
+  return a.事業区分 === '副業' && !/副業|事業/.test(n) ? n + '［事業用］' : n;
 }
 function lineHtml(idx){
   return `<div class="line" data-idx="${idx}">
     <div class="row">
       <select class="ln-side" style="flex:1;"><option value="借方">借方</option><option value="貸方">貸方</option></select>
       <select class="ln-account" style="flex:2;"></select>
+      <button type="button" class="btn small outline ln-find" title="科目を探す" aria-label="科目を探す">🔍</button>
       <button type="button" class="btn small outline ln-del" title="この明細を消す" aria-label="この明細を消す">✕</button>
     </div>
     <div class="row" style="margin-top:6px;">
       <input type="number" class="ln-amount" placeholder="金額" style="flex:1;">
-      <select class="ln-segment" style="flex:1;"><option value="家計">家計</option><option value="副業">副業</option></select>
+      <select class="ln-segment" style="flex:1;"><option value="家計">家計</option><option value="副業">事業用</option></select>
       <label style="display:flex;align-items:center;gap:4px;font-size:11px;white-space:nowrap;">
         <input type="checkbox" class="ln-bonus" style="width:auto;">賞与
       </label>
@@ -2045,6 +2333,10 @@ async function addLine(){
   const sel = row.querySelector('.ln-account');
   sel.innerHTML = accs.map(a => `<option value="${esc(a.勘定科目ID)}">${esc(accLabel(a, accs))}</option>`).join('');
   if (idx === 1) row.querySelector('.ln-side').value = '貸方';
+  // （v1.24）はじめの2行は「費用 ← 現金（なければ最初の資産）」にしておく。よくある支出の形
+  const firstOf = f => (accs.find(f) || {}).勘定科目ID;
+  const dflt = idx === 0 ? firstOf(a => a.分類 === '費用' && a.事業区分 !== '副業') : idx === 1 ? (firstOf(a => a.分類 === '資産' && a.グループ === '現金') || firstOf(a => a.分類 === '資産' && a.グループ !== '貸し借り（人）')) : '';
+  if (dflt) sel.value = dflt;
   row.querySelectorAll('input,select').forEach(el => el.addEventListener('input', checkBalance));
   checkBalance();
 }
@@ -2127,14 +2419,16 @@ document.getElementById('inSubmit').onclick = async () => {
       errEl.innerHTML = 'さっき同じ内容（日付・摘要・明細）の伝票を登録しています。二重登録を防ぐため、今回は登録しませんでした。<br>本当にもう1件ある場合だけ：<button type="button" class="btn small outline" id="inSame" style="margin-top:4px;">もう1件登録する</button>';
       return;
     }
-    okEl.textContent = result.duplicated ? 'この伝票は登録済みでした（前に送った分が届いていました）。直したいときは入出金タブから編集してください'
-      : '登録しました（伝票ID: ' + result.伝票ID + '）';
+    const done = result.duplicated ? 'この伝票は登録済みでした（前に送った分が届いていました）' : '登録しました';
+    okEl.textContent = done + (result.duplicated ? '' : '（伝票ID: ' + result.伝票ID + '）');
     clearDraft();
     document.getElementById('inMemo').value = '';
     document.getElementById('inLines').innerHTML = '';
-    TYPE_MANUAL = false; salReset();
+    TYPE_MANUAL = false; salReset(); resetSuggest();
     await addLine(); await addLine();
-    loadSummary();
+    okEl.textContent = '';
+    showView(INPUT_FROM && INPUT_FROM !== 'input' ? INPUT_FROM : 'summary');     // （v1.24）登録したら、入力を始める前の画面へ戻る
+    toast(done, '続けて入力', () => showView('input'));
   } catch(e) {
     errEl.textContent = e.message + (EDIT ? '' : '（もう一度「登録する」を押しても、二重には登録されません）');
   } finally {
@@ -2185,7 +2479,7 @@ async function fillEdit(){
     row.querySelector('.ln-bonus').checked = !!l.bonus;
     if (l.investOverride !== '' && l.investOverride !== undefined) row.dataset.inv = l.investOverride;
   }
-  salReset(); clearDraft();
+  salReset(); clearDraft(); resetSuggest(); LINES_TOUCHED = true;
   parseMemo(e.memo || '');            // salReset で消えた相手・目的を、摘要から入れ直す
   document.getElementById('inNws').value = e.nws || '';
   checkBalance();
@@ -2266,7 +2560,8 @@ function renderWarikan(d){
   $('wkTitle').textContent = d.project.名称;
   $('wkBadge').innerHTML = `<span class="pill ${done ? 'done' : ''}">${esc(d.project.ステータス)}</span>`;
   const spent = d.spentByMember, paid = d.paidByMember;
-  $('wkBody').innerHTML = `
+  if (ME.mode === 'owner' && !(accountsCache && Date.now() - accountsAt < 120000)) { ensureAccounts().then(() => { if (wk.detail === d) renderWarikan(d); }).catch(() => {}); }
+  $('wkBody').innerHTML = todoHtml(d) + `
     <div class="sub" style="margin-top:10px;">グループ支出合計：${yen(d.totalGroupSpend)}</div>
     <div class="grid2">${d.members.map(m => `<div class="stat"><div class="k">${esc(m)}</div><div class="v">${signed(d.balances[m])}</div>
       <div class="k">立替 ${yen(paid[m])} ／ 負担 ${yen(spent[m])}</div></div>`).join('')}</div>
@@ -2293,8 +2588,8 @@ function cancelBtn(d, p){
 function ledgerBadge(d, p){
   if (ME.mode !== 'owner' || !d.ledger || !d.ledger.ready) return cancelBtn(d, p);
   if (p.家計伝票ID === '(対象外)') return '<div class="sub">家計：自分は関係しない支払い</div>' + cancelBtn(d, p);
-  if (p.家計伝票ID) return '<div class="sub"><span class="pill done">家計に反映済み</span></div>' + cancelBtn(d, p);
-  return `<div class="row" style="margin-top:6px;"><span class="pill">家計に未反映</span><button class="btn small outline" data-act="postOne" data-id="${esc(p.支払いID)}">反映する</button></div>` + cancelBtn(d, p);
+  if (p.家計伝票ID) return '<div class="sub"><span class="pill done">家計に反映済み</span>' + (p.種類 === '支払い' ? ` <button class="btn small outline" data-act="slip" data-id="${esc(p.支払いID)}">出金伝票</button>` : '') + '</div>' + cancelBtn(d, p);
+  return '<div class="sub" style="margin-top:6px;"><span class="pill warm">家計に未反映</span>（上の「家計にまだ入れていない割り勘」で科目を選んで入れます）</div>' + cancelBtn(d, p);
 }
 function dateOnly(v){ return String(v || '').slice(0, 10); }
 
@@ -2302,35 +2597,40 @@ function renderPaymentForm(d, done){
   clearTimeout(wk.timer); wk.seq++; // 古い予約・応答は無効にする
   if (done) { $('wkForm').innerHTML = '<hr style="border:0;border-top:1px solid var(--line);margin:16px 0;"><div class="sub">このプロジェクトは精算済みです。支払いを追加するには、下の「進行中に戻す」を押してください。</div>'; return; }
   const ms = d.members;
+  const meName = d.ledger && d.ledger.myName;
   $('wkForm').innerHTML = `
     <hr style="border:0;border-top:1px solid var(--line);margin:16px 0;">
-    <strong>支払いを登録</strong>
-    <div class="row"><div style="flex:1;"><label>日付</label><input type="date" id="wfDate" value="${localToday()}"></div>
-    <div style="flex:1;"><label>総額（円）</label><input type="number" id="wfTotal" inputmode="numeric" min="1" step="1"></div></div>
-    <label>内容</label><input id="wfMemo" placeholder="例：レンタカー">
-
-    <label>立て替えた人</label>
-    <div class="row" style="gap:14px;">
-      <label class="opt"><input class="chk" type="radio" name="wfPayMode" value="single" checked>ひとりが全額</label>
-      <label class="opt"><input class="chk" type="radio" name="wfPayMode" value="custom">複数人・金額を指定</label>
+    <div class="sec">支払いを登録</div>
+    <div class="wsent">
+      <div class="wrow" id="wfPaySingle"><select id="wfPayer" style="flex:1;">${ms.map(m => `<option value="${esc(m)}"${m === meName ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select><span class="wj">が</span></div>
+      <div class="wmembers">${ms.map(m => `<label class="wchk"><input class="chk wf-part" type="checkbox" data-m="${esc(m)}" checked><span>${esc(m)}</span></label>`).join('')}</div>
+      <div class="wrow"><span class="wj">の</span><input id="wfMemo" placeholder="カフェ代" style="flex:1;"><span class="wj">を払って、</span></div>
+      <div class="wrow"><span class="wyen">¥</span><input type="number" id="wfTotal" inputmode="numeric" min="1" step="1" style="flex:1;"><span class="wj">かかった。</span></div>
+      <div id="wfEqual" class="sub" style="margin-top:8px;"></div>
     </div>
-    <div id="wfPaySingle"><select id="wfPayer">${ms.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}</select></div>
-    <div id="wfPayCustom" class="hidden">${ms.map(m => `<div class="row" style="margin-top:6px;"><span style="flex:1;font-size:14px;">${esc(m)}</span><input type="number" class="wf-pay" data-m="${esc(m)}" min="0" step="1" style="flex:1;" placeholder="0"></div>`).join('')}</div>
-
-    <label>負担する人（その支払いを使った人）</label>
-    <div class="row" style="flex-wrap:wrap;gap:6px 14px;">${ms.map(m => `<label class="opt"><input class="chk wf-part" type="checkbox" data-m="${esc(m)}" checked>${esc(m)}</label>`).join('')}</div>
-    <div class="row" style="gap:14px;margin-top:8px;">
-      <label class="opt"><input class="chk" type="radio" name="wfShareMode" value="equal" checked>均等割り</label>
-      <label class="opt"><input class="chk" type="radio" name="wfShareMode" value="custom">金額を指定</label>
-    </div>
-    <div id="wfEqual" class="sub" style="margin-top:6px;"></div>
-    <div id="wfShareCustom" class="hidden">${ms.map(m => `<div class="row" style="margin-top:6px;"><span style="flex:1;font-size:14px;">${esc(m)}</span><input type="number" class="wf-share" data-m="${esc(m)}" min="0" step="1" style="flex:1;" placeholder="0"></div>`).join('')}</div>
+    <div class="row" style="margin-top:8px;"><span class="sub" style="white-space:nowrap;">日付</span><input type="date" id="wfDate" value="${localToday()}" style="flex:1;"></div>
+    <details id="wfMore"><summary>こだわり入力（何人かで払った・負担額を人ごとに決める）</summary>
+      <label>立て替えた人</label>
+      <div class="row" style="gap:14px;">
+        <label class="opt"><input class="chk" type="radio" name="wfPayMode" value="single" checked>ひとりが全額</label>
+        <label class="opt"><input class="chk" type="radio" name="wfPayMode" value="custom">複数人・金額を指定</label>
+      </div>
+      <div id="wfPayCustom" class="hidden">${ms.map(m => `<div class="row" style="margin-top:6px;"><span style="flex:1;font-size:14px;">${esc(m)}</span><input type="number" class="wf-pay" data-m="${esc(m)}" min="0" step="1" style="flex:1;" placeholder="0"></div>`).join('')}</div>
+      <label>負担する人</label>
+      <div class="row" style="gap:14px;">
+        <label class="opt"><input class="chk" type="radio" name="wfShareMode" value="equal" checked>均等割り（上でチェックした人）</label>
+        <label class="opt"><input class="chk" type="radio" name="wfShareMode" value="custom">金額を指定</label>
+      </div>
+      <div id="wfShareCustom" class="hidden">${ms.map(m => `<div class="row" style="margin-top:6px;"><span style="flex:1;font-size:14px;">${esc(m)}</span><input type="number" class="wf-share" data-m="${esc(m)}" min="0" step="1" style="flex:1;" placeholder="0"></div>`).join('')}</div>
+    </details>
+    ${ME.mode === 'owner' && d.ledger && d.ledger.ready ? `<div class="line" style="margin-top:10px;background:#fbfcfe;">
+      <div class="sub" style="margin-bottom:4px;">家計に入れる（${esc(meName)}の分）：科目を選ぶと、登録と同時に家計の伝票も作ります</div>
+      <div class="row"><select id="wfExp" style="flex:1;">${expenseOptions('').replace('科目を選ぶ', 'あとで選ぶ（家計にはまだ入れない）')}</select><button type="button" class="btn small outline" data-find-for="wfExp" aria-label="科目を探す">🔍</button></div>
+      <div class="row" style="margin-top:6px;"><span class="sub" style="white-space:nowrap;">払った口座</span><select id="wfFrom" style="flex:1;">${payFromOptions(d.ledger.payFrom)}</select></div>
+    </div>` : ''}
     <div id="wfCheck" class="sub" style="margin-top:8px;"></div>
-    ${ME.mode === 'owner' && d.ledger ? (d.ledger.ready
-      ? `<label class="opt" style="margin-top:10px;"><input class="chk" type="checkbox" id="wfLedger" checked>家計の伝票にも反映する（${esc(d.ledger.myName)}の分）</label>`
-      : '<div class="note">設定画面で「割り勘を家計に反映する設定」をすると、自分の分を家計の伝票にも自動で入れられます。</div>') : ''}
     <div id="wfErr" class="err"></div><div id="wfOk" class="ok"></div>
-    <button class="btn" id="wfSubmit" data-act="submitPayment" style="margin-top:10px;width:100%;" disabled>登録する</button>`;
+    <button class="btn" id="wfSubmit" data-act="submitPayment" style="margin-top:10px;width:100%;" disabled>登録</button>`;
   wk.equal = []; wk.equalKey = '';
   wfRefresh();
 }
@@ -2399,10 +2699,11 @@ async function wfSubmit(){
     const total = wfTotal(), payers = wfPayers(), lines = wfLines();
     const ps = payers.reduce((s, x) => s + x.amount, 0), ls = lines.reduce((s, x) => s + x.amount, 0);
     if (ps !== total || ls !== total) throw new Error('金額が合っていません。立替合計・負担合計を総額に合わせてください');
-    const d = await rpc('submitWarikanPayment', [wk.id, { date: $('wfDate').value, memo: $('wfMemo').value, total, clientId: wk.clientId, postToLedger: !!($('wfLedger') && $('wfLedger').checked) }, payers, lines]);
+    const led = $('wfExp') && $('wfExp').value ? { expense: $('wfExp').value, payFrom: $('wfFrom') ? $('wfFrom').value : '' } : undefined;
+    const d = await rpc('submitWarikanPayment', [wk.id, { date: $('wfDate').value, memo: $('wfMemo').value, total, clientId: wk.clientId, ledger: led }, payers, lines]);
     wk.clientId = newClientId();
     renderWarikan(d);
-    $('wfOk').textContent = d.duplicated ? 'すでに登録済みでした（二重登録は防いでいます）' : '登録しました';
+    $('wfOk').textContent = d.duplicated ? 'すでに登録済みでした（二重登録は防いでいます）' : '登録しました' + (led ? '（家計にも入れました）' : ME.mode === 'owner' && d.ledger && d.ledger.ready ? '。家計には、上の「家計にまだ入れていない割り勘」から入れられます' : '');
     if (d.ledgerError) { $('wfOk').textContent = ''; $('wfErr').textContent = '割り勘は登録しましたが、家計への反映に失敗しました：' + d.ledgerError; }
   } catch(e) { $('wfErr').textContent = e.message; wfRefresh(true); }
 }
@@ -2414,7 +2715,6 @@ function renderTools(d, done){
       <div class="row" style="margin-top:8px;">
         <button class="btn small outline" data-act="toggleStatus" data-next="${done ? '進行中' : '精算済み'}">${done ? '進行中に戻す' : '精算済みにする'}</button>
       </div>
-      ${d.ledger && d.ledger.ready && d.ledger.unposted ? `<div class="row" style="margin-top:8px;"><button class="btn small" data-act="postAll">家計に未反映の ${d.ledger.unposted}件をまとめて反映</button></div>` : ''}
       <label>メンバーを追加</label>
       <div class="row"><select id="wkAddName">${((peopleCache && peopleCache.people) || []).filter(n => d.members.indexOf(n) < 0).map(n => `<option>${esc(n)}</option>`).join('') || '<option value="">（追加できる人の口座がありません）</option>'}</select><button class="btn small" data-act="addMember">追加</button><button class="btn small outline" data-act="newPersonAdd">＋ 新しい人</button></div>
       <label>友人に送る専用リンク（このプロジェクトの割り勘だけ見られます）</label>
@@ -2482,7 +2782,14 @@ $('view-warikan').addEventListener('click', async (e) => {
       if (cur.indexOf(b.dataset.name) < 0) cur.push(b.dataset.name);
       el.value = cur.join('、'); return;
     }
-    if (act === 'postOne') { await rpc('postWarikanPayment', [b.dataset.id]); return loadWarikanDetail(wk.id); }
+    if (act === 'postOne') {
+      const row = b.closest('[data-todo]'), ex = row && row.querySelector('.td-exp'), fr = row && row.querySelector('.td-from');
+      if (ex && !ex.value) throw new Error('「' + (row.querySelector('b').textContent) + '」の科目を選んでください');
+      b.disabled = true;
+      await rpc('postWarikanPayment', [b.dataset.id, { expense: ex ? ex.value : '', payFrom: fr ? fr.value : '' }]);
+      return loadWarikanDetail(wk.id);
+    }
+    if (act === 'slip') { const p = wk.detail.payments.find(x => x.支払いID === b.dataset.id); await ensureAccounts(); return slipForm(p, wk.detail); }
     if (act === 'postAll') {
       const r = await rpc('postWarikanPayments', [wk.id]); renderWarikan(r.project);
       if (r.errors.length) wkErr('反映できなかった分：' + r.errors.join(' / '));
@@ -2615,7 +2922,7 @@ document.getElementById('view-settings').addEventListener('click', async (e) => 
 document.getElementById('lgSave').onclick = async () => {
   const m = document.getElementById('lgMsg'); m.textContent = '';
   try {
-    await rpc('saveSettings', [{ '割り勘_自分の名前': document.getElementById('lgMe').value.trim(), '割り勘_費用科目ID': document.getElementById('lgExp').value,
+    await rpc('saveSettings', [{ '割り勘_自分の名前': document.getElementById('lgMe').value.trim(), '割り勘_費用科目ID': '',
       '割り勘_支払元科目ID': document.getElementById('lgPay').value }]);
     m.textContent = '保存しました';
   } catch(e) { document.getElementById('stErr').textContent = e.message; }
