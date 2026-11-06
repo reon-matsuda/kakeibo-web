@@ -203,20 +203,41 @@
 </div>
 
 <!-- 設定（率・年払い固定費・ローン） -->
+<!-- 副業の税金（v1.17） -->
+<div id="view-tax" class="card hidden">
+  <div class="row" style="justify-content:space-between;"><strong>副業の税金（見込み）</strong><button class="btn small outline" id="txBack">← メニュー</button></div>
+  <div class="row" style="margin-top:8px;"><label style="margin:0;">年</label><select id="txYear" style="flex:1;"></select></div>
+  <div id="txAlerts"></div>
+  <div class="hero-main" style="cursor:default;margin-top:6px;"><span class="sub">副業で増える税金（所得税＋翌年の住民税）</span><span class="big" id="txSide">－</span></div>
+  <div class="grid2">
+    <div class="stat"><div class="k">源泉徴収なし給与の税金の割合</div><div class="v" id="txRate">－</div></div>
+    <div class="stat"><div class="k">確定申告で納める所得税（見込み）</div><div class="v" id="txPay">－</div></div>
+  </div>
+  <div class="note" id="txRateNote"></div>
+  <details class="bdbox"><summary>計算の内訳</summary><div id="txCalc"></div></details>
+  <div class="sec" style="margin-top:16px;">情報を入れる（<span id="txYearLabel"></span>年分・年額）</div>
+  <div class="note">本業の額面と源泉徴収税額は、源泉徴収票（見込み）の数字です。保険料などは「科目から集計」を選ぶと、その科目の伝票の合計（その年の分）を自動で使います。</div>
+  <div id="txForm"></div>
+  <button class="btn" id="txSave" style="margin-top:12px;width:100%;">保存して計算し直す</button>
+  <div id="txMsg" class="err"></div>
+  <div class="note" style="margin-top:10px;">計算の決まり：<span id="txRules"></span>。所得税は復興特別所得税（2.1%）込み、住民税は所得割10%＋均等割5,000円（森林環境税込み）−調整控除。給与所得は式で出すので、国税庁の表と数百円ずれることがあります。税金の見込みとしてお使いください。</div>
+</div>
+
 <div id="view-settings" class="card hidden">
   <strong>一覧を見る</strong>
   <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:8px;">
     <button class="btn small outline" data-open-list="accounts">勘定科目</button><button class="btn small outline" data-open-list="annual">年払い固定費</button>
     <button class="btn small outline" data-open-list="loans">ローン</button><button class="btn small outline" data-open-list="people">人・割り勘メンバー</button>
   </div>
+  <button class="btn outline" id="openTax" style="margin-top:12px;width:100%;">副業の税金（見込み）・保険などの控除</button>
   <hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">
   <strong>基本設定</strong>
   <div class="row"><div style="flex:1;"><label>貯蓄率（%）</label><input type="number" id="stSave" step="0.1"></div>
   <div style="flex:1;"><label>投資率（%）</label><input type="number" id="stInvest" step="0.1"></div></div>
   <div class="row"><div style="flex:1;"><label>期待利回り（%）</label><input type="number" id="stExp" step="0.1"></div>
   <div style="flex:1;"><label>集計開始月</label><input type="month" id="stStart"></div></div>
-  <label>開始前月の収入（集計開始月の予算の元。先月の手取り合計）</label><input type="number" id="stPre" inputmode="numeric" placeholder="例：300000">
-  <div class="note">今月の予算は先月の総収入から組みます。集計開始月だけは前月の記録が無いので、ここに入れた額を使います。勘定科目の追加・編集は「口座」タブの「＋ 科目を追加」、または各科目をタップして行います。</div>
+  <label>開始前月の収入（集計開始月の前月に収入の伝票が無いときだけ使う）</label><input type="number" id="stPre" inputmode="numeric" placeholder="例：300000">
+  <div class="note">今月の予算は先月の総収入（伝票）から組みます。伝票を直せば予算もすぐ変わります。集計開始月の前月に収入の伝票が無いときだけ、ここに入れた額を使います。勘定科目の追加・編集は「口座」タブの「＋ 科目を追加」、または各科目をタップして行います。</div>
   <div class="note">期待利回り＝eMAXIS Slim オールカントリーの平均利益率の目安。これを上回る金利のローンには警告を出します。</div>
   <button class="btn small" id="stSaveBtn" style="margin-top:10px;">保存</button>
   <div id="stMsg" class="ok"></div>
@@ -371,7 +392,7 @@ async function rpc(method, args){
 
 // ---- キーゲート ----
 let ME = { mode: 'owner' };
-const NEED_SERVER_BUILD = 16;   // この画面が必要とするサーバーの版（Code.gs の SERVER_BUILD）
+const NEED_SERVER_BUILD = 17;   // この画面が必要とするサーバーの版（Code.gs の SERVER_BUILD）
 async function showApp(){
   const gateErr = document.getElementById('gateErr');
   try {
@@ -389,7 +410,7 @@ async function showApp(){
     bar.id = 'oldServer';
     bar.className = 'card';
     bar.style.cssText = 'background:#fff4e5;border:1px solid #f0b46a;margin-top:0;';
-    bar.innerHTML = '<b>⚠️ サーバーが古い版のままです</b><div class="sub" style="margin-top:4px;line-height:1.7;">画面は v1.16 ですが、Apps Script は ' + (ME.build ? 'v1.' + ME.build : 'v1.15 以前') +
+    bar.innerHTML = '<b>⚠️ サーバーが古い版のままです</b><div class="sub" style="margin-top:4px;line-height:1.7;">画面は v1.17 ですが、Apps Script は ' + (ME.build ? 'v1.' + ME.build : 'v1.15 以前') +
       ' です。このままだと伝票の編集・削除などが動きません。Apps Script に最新の Code.gs を貼って保存し、「デプロイ」→「デプロイを管理」→ 鉛筆（編集）→ バージョン「新しいバージョン」→「デプロイ」をしてください。</div>';
     document.getElementById('app').prepend(bar);
   }
@@ -416,7 +437,7 @@ document.getElementById('gateGo').onclick = () => {
 if (getKey()) { showApp(); }
 
 // ---- 画面の切り替え（v1.8） ----
-const VIEWS = ['summary', 'input', 'lists', 'accounts', 'warikan', 'settings'];
+const VIEWS = ['summary', 'input', 'lists', 'accounts', 'warikan', 'settings', 'tax'];
 function showView(v, opt){
   VIEWS.forEach(t => document.getElementById('view-' + t).classList.toggle('hidden', t !== v));
   document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('active', b.dataset.tab === v));
@@ -428,12 +449,14 @@ function showView(v, opt){
   if (v === 'accounts') loadAccounts();
   if (v === 'summary') loadSummary();
   if (v === 'input') prepareInput();
+  if (v === 'tax') ensureAccounts().then(openTax);
 }
 document.getElementById('tabbar').addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-tab]');
   if (btn) showView(btn.dataset.tab);
 });
 document.getElementById('fab').onclick = () => showView('input');
+document.getElementById('openTax').onclick = () => showView('tax');
 document.getElementById('view-settings').addEventListener('click', e => {
   const b = e.target.closest('[data-open-list]'); if (b) showView('lists', { kind: b.dataset.openList });
 });
@@ -518,7 +541,7 @@ const DETAIL = {
     f: x => `自由費・今月分 <b>${yen(x.freeBase)}</b> ＋ 前月からの繰越 <b>${yen(x.carryFree)}</b> − 今月の変動費 <b>${yen(x.variable)}</b> ＝ <b>${yen(x.freeLeftMonth)}</b>`,
     w: '自由費・今月分の内訳は、ホーム下の「自由費の内訳」で1行ずつ見られます。月末の残りは来月に繰り越します。' },
   baseIncome: { t: '今月の予算の元（先月の総収入）', v: x => x.baseIncome, h: 'baseIncome', hl: '予算の元', cat: 'income', ym: x => x.baseSource.indexOf('先月') === 0 ? x.baseYm : '',
-    f: x => `${esc(x.baseSource)}：給与 ＋ 副業 ＋ その他の収入 ＝ <b>${yen(x.baseIncome)}</b>（賞与は除く）`,
+    f: x => `${esc(x.baseSource)}：給与 ＋ 副業 ＋ その他の収入` + (x.unwithheldTax ? ` <b>${yen(x.baseIncomeGross)}</b> − 源泉徴収なし給与の税金（見込み） <b>${yen(x.unwithheldTax)}</b>` : '') + ` ＝ <b>${yen(x.baseIncome)}</b>（賞与は除く）`,
     w: '今月の予算は、先月に実際に入った収入から組みます。まだ入っていない今月の給料をあてにしないためです。集計開始月だけは「設定」の「開始前月の収入」を使います。' },
   monthIncome: { t: '今月の収入（来月の予算）', v: x => x.monthlyIncome, h: 'income', hl: '収入', cat: 'income', ym: x => x.yyyymm,
     f: x => `給与 <b>${yen(x.salaryIncome)}</b> ＋ 副業 <b>${yen(x.sideIncome)}</b> ＋ その他 <b>${yen(x.otherIncome)}</b> ＝ <b>${yen(x.monthlyIncome)}</b>`,
@@ -653,7 +676,8 @@ document.getElementById('sheet').addEventListener('click', async e => {
           分類: document.getElementById('afCls').value, 種別: document.getElementById('afType').value, 事業区分: document.getElementById('afSeg').value,
           初期残高: document.getElementById('afInit').value === '' ? 0 : Number(document.getElementById('afInit').value),
           家計反映対象: document.getElementById('afHH').checked, 投資フラグ: document.getElementById('afInv').checked,
-          グループ: document.getElementById('afGrpBox').classList.contains('hidden') ? '' : document.getElementById('afGrp').value }]);
+          グループ: document.getElementById('afGrpBox').classList.contains('hidden') ? '' : document.getElementById('afGrp').value,
+          税区分: document.getElementById('afTaxBox').classList.contains('hidden') ? '' : document.getElementById('afTax').value }]);
       }
       accountsCache = null; LS.masters = null;
       closeSheet();
@@ -670,6 +694,7 @@ document.getElementById('sheet').addEventListener('change', e => {
   document.getElementById('afInitBox').classList.toggle('hidden', pl);
   document.getElementById('afHH').checked = pl;       // 収益・費用は家計に数える／口座は数えない が基本
   if (!pl) document.getElementById('afType').value = '';
+  document.getElementById('afTaxBox').classList.toggle('hidden', c !== '収益');
   const bsCls = c === '資産' || c === '負債';
   document.getElementById('afGrpBox').classList.toggle('hidden', !bsCls);
   if (bsCls) document.getElementById('afGrp').innerHTML = grpOpts(c, '');
@@ -687,6 +712,7 @@ function openAccountForm(a){
   openSheet(a ? '科目を編集' : '科目を追加', `
     <label>科目名</label><input id="afName" value="${esc(v.勘定科目名)}" placeholder="例：〇〇銀行、現金、食費">
     <label>分類</label><select id="afCls">${opt([['資産', '資産（銀行・現金・電子マネー・投資・立替金）'], ['負債', '負債（クレジットカード・借入）'], ['収益', '収益（給与・副業などの収入）'], ['費用', '費用（食費・家賃などの支出）'], ['純資産', '純資産（残高調整など）']], v.分類)}</select>
+    <div id="afTaxBox" class="${v.分類 === '収益' ? '' : 'hidden'}"><label>税区分（税金の計算での扱い）</label><select id="afTax">${opt([['', '種別から自動（給与収入→源泉徴収あり／副業収入→事業・雑所得）'], ['給与（源泉徴収あり）', '給与（源泉徴収あり）…本業など'], ['給与（源泉徴収なし）', '給与（源泉徴収なし）…手取りは税金を引いて数える'], ['事業・雑所得', '事業・雑所得…副業の売上（経費を引く）'], ['非課税・対象外', '非課税・対象外…ポイント・利息など']], v.税区分の指定 !== undefined ? v.税区分の指定 : (v.税区分 || ''))}</select></div>
     <div id="afTypeBox" class="${pl ? '' : 'hidden'}"><label>種別（今月の残りのどこに数えるか）</label><select id="afType">${opt([['', '（なし＝費用なら変動費）'], ['給与収入', '給与収入'], ['副業収入', '副業収入'], ['その他収入', 'その他収入'], ['毎月固定費', '毎月固定費'], ['年払い固定費', '年払い固定費'], ['ローン', 'ローン（購入）'], ['変動費', '変動費']], v.種別)}</select></div>
     <div id="afGrpBox" class="${v.分類 === '資産' || v.分類 === '負債' ? '' : 'hidden'}"><label>グループ（口座画面での並び）</label><select id="afGrp">${grpOpts(v.分類, v.グループ)}</select></div>
     <label>事業区分</label><select id="afSeg">${opt([['家計', '家計'], ['副業', '副業'], ['共通', '共通']], v.事業区分 || '家計')}</select>
@@ -729,7 +755,9 @@ function breakdownHtml(x){
     bdRow('＝', '残投資予定額（月末）', x.investEnd,
       'まだ投資していない予定額です。プラスなら投資できる余地、マイナスなら予定より多く投資しています。', true);
   const free =
-    bdRow('', '予算の元（先月の総収入）', x.baseIncome, `${esc(x.baseSource)}です。給与・副業・その他の収入の合計で、賞与は全額貯蓄に回すので含めません。今月入った収入は来月の予算になります。`) +
+    (x.unwithheldTax ? bdRow('', '先月の総収入（額面）', x.baseIncomeGross, `${esc(x.baseSource)}の合計です。給与・副業・その他の収入で、賞与は全額貯蓄に回すので含めません。`) +
+      bdRow('−', '源泉徴収なし給与の税金（見込み）', x.unwithheldTax, `源泉徴収されていない給与 ${yen(x.unwithheldSalary)} には、あとで所得税・住民税がかかります。メニューの「副業の税金」で出した割合（${Math.round(x.unwithheldRate * 1000) / 10}%）を引いて、実際の手取りで数えます。`) : '') +
+    bdRow(x.unwithheldTax ? '＝' : '', '予算の元（先月の総収入' + (x.unwithheldTax ? '・手取り' : '') + '）', x.baseIncome, `${esc(x.baseSource)}です。給与・副業・その他の収入の合計で、賞与は全額貯蓄に回すので含めません。今月入った収入は来月の予算になります。`) +
     bdRow('−', '貯蓄額（給与分）', x.savingFromSalary, '予算の元 × 貯蓄率。先に取り分けて、使えないお金にします。') +
     bdRow('−', '毎月固定費（予定）', x.fixedMonthlyPlan, '前月の毎月固定費の実績です。月末に払うものがまだ現れていなくても、先に差し引いておきます（初月は今月の実績）。') +
     bdRow(x.fixedCarryDiff < 0 ? '＋' : '−', '先月の固定費の差の精算', Math.abs(x.fixedCarryDiff), '先月の固定費が予定より多かった分は今月の自由費から引き、少なかった分は足します（先月の 実績−予定 ＝ ' + signYen(x.fixedCarryDiff) + '）。') +
@@ -867,6 +895,85 @@ document.getElementById('lsBody').addEventListener('click', e => {
   const tb = v => v === true || String(v).toUpperCase() === 'TRUE';
   openAccountForm(Object.assign({}, a, { 家計反映対象: tb(a.家計反映対象), 投資フラグ: tb(a.投資フラグ) }));
 });
+
+// ---- 副業の税金（v1.17） ----
+const TX_FIELDS = [
+  ['本業給与収入', '本業の給与（額面・年間）', '源泉徴収票の「支払金額」の見込み'],
+  ['本業源泉徴収税額', '本業で源泉徴収される所得税（年間）', '源泉徴収票の「源泉徴収税額」の見込み'],
+  ['副業給与年間見込み', '源泉徴収なしの給与（年間見込み）', '空なら、今年の伝票の合計を1年分にのばして使います'],
+  ['社会保険料', '社会保険料（健康保険・年金など。本業の天引き分も）', '', true],
+  ['生命保険料_一般', '生命保険料（一般・新契約）', '', true],
+  ['生命保険料_介護医療', '介護医療保険料（医療保険など）', '', true],
+  ['生命保険料_個人年金', '個人年金保険料', '', true],
+  ['地震保険料', '地震保険料', '', true],
+  ['iDeCo等', 'iDeCo・小規模企業共済の掛金', '', true],
+  ['一般扶養人数', '扶養している人の数（16歳以上・一般）', '人'],
+  ['特定扶養人数', 'うち19〜22歳（特定扶養）の人数', '人（上の数に含めない）'],
+  ['青色申告特別控除', '青色申告特別控除（副業の売上がある場合）', '0・100000・550000・650000 のどれか'],
+  ['その他所得控除', 'その他の所得控除（医療費控除など）', '控除額を入れます']
+];
+let TX = { year: 0, est: null };
+async function openTax(){
+  const sel = document.getElementById('txYear');
+  const y = Number(localToday().slice(0, 4));
+  if (!sel.options.length) sel.innerHTML = [y - 1, y, y + 1].map(v => `<option value="${v}"${v === y ? ' selected' : ''}>${v}年</option>`).join('');
+  await loadTax(Number(sel.value));
+}
+async function loadTax(year){
+  const msg = document.getElementById('txMsg'); msg.textContent = '';
+  try { TX.year = year; TX.est = await rpc('getTaxEstimate', [year]); renderTax(); }
+  catch(e) { msg.textContent = e.message; }
+}
+function renderTax(){
+  const e = TX.est, a = e.all, st = e.settings || {};
+  document.getElementById('txYearLabel').textContent = e.year;
+  document.getElementById('txRules').textContent = e.rules;
+  document.getElementById('txSide').textContent = yen(e.side.total);
+  document.getElementById('txRate').textContent = (Math.round(e.sideSalaryRate * 1000) / 10) + '%';
+  document.getElementById('txPay').innerHTML = e.payIncomeTax >= 0 ? yen(e.payIncomeTax) : '<span class="plus">還付 ' + yen(-e.payIncomeTax) + '</span>';
+  document.getElementById('txRateNote').textContent = '源泉徴収なしの給与 年' + yen(e.fromEntries.sideSalaryAnnual) + '（今年の伝票 ' + yen(e.fromEntries.sideSalaryYtd) + '）にかかる税金は ' + yen(e.sideSalaryTax) +
+    '。この割合を引いた額（手取り）を、翌月の予算の元にしています。';
+  document.getElementById('txAlerts').innerHTML = (e.alerts || []).map(t => '<div class="line" style="background:#fff8e1;border-color:#ffe082;margin-top:10px;font-size:13px;">⚠️ ' + esc(t) + '</div>').join('');
+  const row = (k, v, strong) => `<div class="ent"${strong ? ' style="font-weight:700;"' : ''}><span>${k}</span><b class="amt">${v}</b></div>`;
+  document.getElementById('txCalc').innerHTML =
+    '<div class="sub" style="margin-top:8px;">所得</div>' +
+    row('給与の収入（本業＋源泉徴収なしの給与）', yen(a.salaryTotal)) + row('− 給与所得控除', yen(a.salaryDed)) + row('＝ 給与所得', yen(a.salaryIncome)) +
+    row('副業の売上 − 経費 − 青色申告特別控除（事業・雑所得）', yen(a.bizIncome)) +
+    row('（副業の売上 ' + yen(e.fromEntries.bizSales) + '・経費 ' + yen(e.fromEntries.bizExpenses) + '）', '') + row('＝ 合計所得', yen(a.totalIncome), true) +
+    '<div class="sub" style="margin-top:10px;">所得税</div>' +
+    row('社会保険料・iDeCo等・その他', yen(e.inputs.social + e.inputs.ideco + e.inputs.otherDed)) + row('生命保険料控除', yen(a.lifeIT)) + row('地震保険料控除', yen(a.quakeIT)) +
+    row('扶養控除', yen(a.depIT)) + row('基礎控除', yen(a.basicIT)) + row('＝ 課税所得（千円未満切り捨て）', yen(a.taxableIT)) +
+    row('所得税（復興特別所得税込み）', yen(a.incomeTax), true) + row('− 本業で源泉徴収される額', yen(e.withheld)) +
+    row('＝ 確定申告で納める見込み', e.payIncomeTax >= 0 ? yen(e.payIncomeTax) : '還付 ' + yen(-e.payIncomeTax), true) +
+    '<div class="sub" style="margin-top:10px;">住民税（翌年の6月から払う分）</div>' +
+    row('生命保険料控除・地震保険料控除・扶養控除', yen(a.lifeRT + a.quakeRT + a.depRT)) + row('基礎控除', yen(a.basicRT)) + row('＝ 課税所得', yen(a.taxableRT)) +
+    row('所得割（10% − 調整控除 ' + yen(a.residentAdj) + '）＋ 均等割', yen(a.residentIncome) + ' ＋ ' + yen(a.residentFlat)) + row('住民税', yen(a.resident), true) +
+    '<div class="sub" style="margin-top:10px;">副業で増える分（副業が無い場合との差）</div>' +
+    row('所得税', yen(e.side.incomeTax)) + row('住民税', yen(e.side.resident)) + row('合計', yen(e.side.total), true);
+  const accs = (accountsCache || []).filter(x => x.分類 === '費用');
+  document.getElementById('txForm').innerHTML = TX_FIELDS.map(([k, label, hint, linkable]) => {
+    const linked = linkable && st[k + '_科目'];
+    return `<label>${esc(label)}</label><div class="row">` +
+      `<input type="number" inputmode="numeric" class="tx-in" data-k="${k}" value="${linked ? (e.linked[k] || 0) : (st[k] === undefined ? '' : st[k])}" ${linked ? 'disabled' : ''} placeholder="${esc(hint && !/^人/.test(hint) ? '' : hint)}" style="flex:1;">` +
+      (linkable ? `<select class="tx-acc" data-k="${k}" style="flex:1;"><option value="">金額を入れる</option>${accs.map(x => `<option value="${esc(x.勘定科目ID)}"${x.勘定科目ID === st[k + '_科目'] ? ' selected' : ''}>科目から集計：${esc(x.勘定科目名)}</option>`).join('')}</select>` : '') +
+      `</div>${hint && !/^人/.test(hint) ? '<div class="note" style="margin-top:2px;">' + esc(hint) + '</div>' : ''}`;
+  }).join('');
+}
+document.getElementById('txYear').addEventListener('change', e => loadTax(Number(e.target.value)));
+document.getElementById('txBack').onclick = () => showView('settings');
+document.getElementById('txForm').addEventListener('change', e => {
+  if (!e.target.classList.contains('tx-acc')) return;
+  const inp = document.querySelector('.tx-in[data-k="' + e.target.dataset.k + '"]');
+  inp.disabled = !!e.target.value; if (e.target.value) inp.value = '';
+});
+document.getElementById('txSave').onclick = async () => {
+  const msg = document.getElementById('txMsg'); msg.textContent = '';
+  const o = {};
+  document.querySelectorAll('.tx-in').forEach(i => { if (!i.disabled && i.value !== '') o[i.dataset.k] = Number(i.value); });
+  document.querySelectorAll('.tx-acc').forEach(s => { if (s.value) o[s.dataset.k + '_科目'] = s.value; });
+  try { TX.est = await rpc('saveTaxSettings', [TX.year, o]); renderTax(); msg.className = 'ok'; msg.textContent = '保存して計算し直しました'; setTimeout(() => { msg.className = 'err'; }, 0); }
+  catch(err) { msg.className = 'err'; msg.textContent = err.message; }
+};
 
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function localToday(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
