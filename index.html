@@ -193,6 +193,7 @@
 
 <!-- 口座（v1.8） -->
 <div id="view-accounts" class="hidden">
+  <div id="acWarn"></div>
   <div class="card hero">
     <div class="row" style="justify-content:space-between;"><span class="sub">資産総額（資産 − 負債）</span><button class="btn small outline" id="acReload">更新</button></div>
     <div class="big" id="acNet">－</div>
@@ -231,22 +232,25 @@
   <label>摘要</label>
   <input type="text" id="inMemo" placeholder="例：スーパーで食材">
   <button class="btn outline small" id="inSalStart" style="margin-top:10px;">給与明細から入力（額面・天引きから伝票を作る）</button>
+  <div id="inBizAsk" class="line hidden" style="background:#fff8e1;border-color:#ffe082;font-size:13px;line-height:1.7;">業務委託などの<b>報酬（事業・雑所得）</b>です。報酬から<b>所得税（10.21%）や振込手数料</b>が引かれて振り込まれていませんか？
+    <div class="row" style="flex-wrap:wrap;margin-top:6px;"><button type="button" class="btn small" id="inBizUse">引かれている → 報酬の明細で入れる</button></div>
+    <label class="opt" style="margin-top:6px;"><input type="checkbox" class="chk" id="inBizNone">何も引かれていない（振り込まれた額＝報酬の額）</label></div>
   <div id="inSalAsk" class="line hidden" style="background:#fff8e1;border-color:#ffe082;font-size:13px;">給与（源泉徴収あり）の伝票です。税金の計算に使うので、<b>額面</b>と<b>天引き（所得税など）</b>を入れてください。<button type="button" class="btn small" id="inSalUse" style="margin-top:6px;">給与明細の形で入れる</button></div>
   <div id="inSal" class="sal hidden">
-    <div class="row" style="justify-content:space-between;"><b style="font-size:13px;">給与明細</b><button type="button" class="btn small outline" id="inSalOff">ふつうの入力に戻す</button></div>
+    <div class="row" style="justify-content:space-between;"><b style="font-size:13px;" id="slTitle">給与明細</b><button type="button" class="btn small outline" id="inSalOff">ふつうの入力に戻す</button></div>
     <div class="g2">
-      <div><label>給与の科目</label><select id="slAcc"></select></div>
+      <div><label id="slAccLab">給与の科目</label><select id="slAcc"></select></div>
       <div><label>振込先の口座</label><select id="slBank"></select></div>
-      <div><label>額面（総支給額）<span class="minus">*</span></label><input type="number" inputmode="numeric" id="slGross" placeholder="例：300000"></div>
-      <div><label>所得税（源泉徴収）<span class="minus">*</span></label><input type="number" inputmode="numeric" id="slIt" placeholder="無ければ 0"></div>
-      <div><label>住民税</label><input type="number" inputmode="numeric" id="slRt" placeholder="0"></div>
-      <div><label>社会保険料（健保・年金・雇用・介護の合計）</label><input type="number" inputmode="numeric" id="slSo" placeholder="0"></div>
-      <div><label>その他の天引き</label><input type="number" inputmode="numeric" id="slOt" placeholder="0"></div>
-      <div><label>その他の天引きの科目</label><select id="slOtAcc"></select></div>
+      <div><label><span id="slGrossLab">額面（総支給額）</span><span class="minus">*</span></label><input type="number" inputmode="numeric" id="slGross" placeholder="例：300000"></div>
+      <div><label>所得税（源泉徴収）<span class="minus">*</span></label><input type="number" inputmode="numeric" id="slIt" placeholder="無ければ 0"><button type="button" class="btn small outline hidden" id="slCalc" style="margin-top:4px;">10.21%で計算</button></div>
+      <div id="slRtBox"><label>住民税</label><input type="number" inputmode="numeric" id="slRt" placeholder="0"></div>
+      <div id="slSoBox"><label>社会保険料（健保・年金・雇用・介護の合計）</label><input type="number" inputmode="numeric" id="slSo" placeholder="0"></div>
+      <div><label id="slOtLab">その他の天引き</label><input type="number" inputmode="numeric" id="slOt" placeholder="0"></div>
+      <div><label id="slOtAccLab">その他の天引きの科目</label><select id="slOtAcc"></select></div>
     </div>
-    <label class="opt" style="margin-top:10px;"><input type="checkbox" class="chk" id="slBonus">賞与（ボーナス）</label>
+    <label class="opt" style="margin-top:10px;" id="slBonusBox"><input type="checkbox" class="chk" id="slBonus">賞与（ボーナス）</label>
     <div id="slNet" class="sub" style="margin-top:8px;"></div>
-    <div class="note" style="margin-top:4px;">入れると下の明細を自動で作ります（振込額＝額面 − 天引き）。天引きは予算の元から引き、税金の計算（源泉徴収税額・社会保険料）に自動で入ります。</div>
+    <div class="note" style="margin-top:4px;" id="slNote">入れると下の明細を自動で作ります（振込額＝額面 − 天引き）。天引きは予算の元から引き、税金の計算（源泉徴収税額・社会保険料）に自動で入ります。</div>
   </div>
   <div id="inLines"></div>
   <button class="btn outline small" id="inAddLine" style="margin-top:10px;">＋ 明細を追加</button>
@@ -264,6 +268,7 @@
     <option value="振替">振替（収入・支出なし。口座どうしの移動など）</option>
   </select>
   <div class="row" style="margin-top:4px;justify-content:space-between;"><span id="inTypeNote" class="note" style="margin:0;"></span><button type="button" class="btn small outline hidden" id="inTypeAuto">↺ 自動に戻す</button></div>
+  <div id="inTips"></div>
   <div id="inCheck" class="sub" style="margin-top:8px;"></div>
   <div id="inErr" class="err"></div>
   <div id="inOk" class="ok"></div>
@@ -283,6 +288,27 @@
   </div>
   <div class="note" id="txRateNote"></div>
   <div id="txFuru"></div>
+  <details class="bdbox" id="txHelp"><summary>収入の種類と税金のしくみ（給与と業務委託の違い）</summary>
+    <div class="sub" style="line-height:1.8;margin-top:6px;">
+      <p style="margin:6px 0;">税金は、もらった額（収入）そのものではなく、そこから必要な分を引いた<b>「もうけ（所得）」</b>にかかります。何を引けるかは、収入の種類で決まっています。</p>
+      <table class="nw" style="font-size:12px;"><thead><tr><th></th><th>給与</th><th>業務委託の報酬</th></tr></thead><tbody>
+        <tr><td>働き方</td><td style="white-space:normal;text-align:left;">雇われて、指示どおり・決まった時間で働く</td><td style="white-space:normal;text-align:left;">仕事を受けて、やり方は自分で決める</td></tr>
+        <tr><td>もらう書類</td><td style="white-space:normal;text-align:left;">給与所得の源泉徴収票</td><td style="white-space:normal;text-align:left;">自分で請求書を出す（支払調書が来ることも）</td></tr>
+        <tr><td>所得の種類</td><td style="white-space:normal;text-align:left;">給与所得</td><td style="white-space:normal;text-align:left;">事業所得・雑所得</td></tr>
+        <tr><td>引けるもの</td><td style="white-space:normal;text-align:left;"><b>給与所得控除</b>（収入から式で自動）</td><td style="white-space:normal;text-align:left;"><b>実際にかかった経費</b></td></tr>
+        <tr><td>このアプリの税区分</td><td style="white-space:normal;text-align:left;">給与（源泉徴収あり／なし）</td><td style="white-space:normal;text-align:left;">事業・雑所得</td></tr>
+      </tbody></table>
+      <p style="margin:10px 0 6px;"><b>なぜ給与からは経費を引けないの？</b>　雇われて働く人の道具や場所は、ふつう会社が用意します。そこで法律が「給与の人の経費はだいたいこれくらい」とみなした額（給与所得控除）を自動で引きます。経費の分はもう控除に入っているので、実際の経費を足して引くことはできません。</p>
+      <p style="margin:6px 0;"><b>例：本業の給与400万円＋副業60万円</b><br>
+        ・副業が<b>給与</b>なら：給与は合わせて460万円。給与所得控除は 124万円 → 136万円 に12万円増えるだけなので、もうけは <b>48万円</b> 増えます。副業の交通費を使っても変わりません。<br>
+        ・副業が<b>業務委託の報酬</b>なら：60万円 − 実際の経費（たとえば10万円）＝ もうけは <b>50万円</b>。経費が多いほど税金が減ります。</p>
+      <p style="margin:6px 0;"><b>個人で業務委託契約を結んで働いている場合</b>は、ふつう「事業・雑所得」です。ただし決め手は契約書の名前ではなく実際の働き方で、指示どおり決まった時間に働き、時間で報酬が決まるなど給与に近いときは給与になることもあります。迷ったら、相手に「源泉徴収票が出るか」を聞いてください。</p>
+      <p style="margin:6px 0;"><b>報酬から10.21%引かれている場合</b>　原稿料・デザイン料・講演料などは、業務委託でも報酬から所得税（10.21%。100万円を超える部分は20.42%）が引かれて振り込まれます。入力画面の「報酬の明細で入れる」で、報酬の額と引かれた額を入れてください。引かれた額は確定申告で精算されます。</p>
+      <p style="margin:6px 0;"><b>事業所得と雑所得</b>　副業の規模が小さいうちは、ふつう雑所得です。仕事として続けていて帳簿を付けている場合は事業所得になり、開業届と青色申告の申請を出していれば青色申告特別控除（最大65万円）が使えます。雑所得なら、青色申告特別控除は0のままにします。</p>
+      <p style="margin:6px 0;"><b>例外</b>　給与の人でも、研修費や単身赴任の帰宅旅費などが多いときは「特定支出控除」で引けることがあります（会社の証明が必要）。このアプリの計算には入れていません。</p>
+      <p style="margin:6px 0;" class="note">税金の見込みのための説明です。自分の場合がどれに当たるか迷うときは、税務署の電話相談などで確かめてください。</p>
+    </div>
+  </details>
   <details class="bdbox"><summary>計算の内訳</summary><div id="txCalc"></div></details>
   <div class="sec" style="margin-top:16px;">情報を入れる（<span id="txYearLabel"></span>年分・年額）</div>
   <div class="note" style="line-height:1.7;">ふだんは伝票から自動で集めます（給与は「給与明細から入力」で額面と天引きを、保険料・iDeCo・ふるさと納税は口座タブで科目の「税の項目」を選んでおきます）。集計開始月より前の分や、親が払っている保険料など伝票に載らない分だけ「手入力」に足してください。</div>
@@ -461,7 +487,7 @@ async function rpc(method, args){
 
 // ---- キーゲート ----
 let ME = { mode: 'owner' };
-const NEED_SERVER_BUILD = 18;   // この画面が必要とするサーバーの版（Code.gs の SERVER_BUILD）
+const NEED_SERVER_BUILD = 19;   // この画面が必要とするサーバーの版（Code.gs の SERVER_BUILD）
 async function showApp(){
   const gateErr = document.getElementById('gateErr');
   try {
@@ -479,7 +505,7 @@ async function showApp(){
     bar.id = 'oldServer';
     bar.className = 'card';
     bar.style.cssText = 'background:#fff4e5;border:1px solid #f0b46a;margin-top:0;';
-    bar.innerHTML = '<b>⚠️ サーバーが古い版のままです</b><div class="sub" style="margin-top:4px;line-height:1.7;">画面は v1.18 ですが、Apps Script は ' + (ME.build ? 'v1.' + ME.build : 'v1.15 以前') +
+    bar.innerHTML = '<b>⚠️ サーバーが古い版のままです</b><div class="sub" style="margin-top:4px;line-height:1.7;">画面は v1.19 ですが、Apps Script は ' + (ME.build ? 'v1.' + ME.build : 'v1.15 以前') +
       ' です。このままだと伝票の編集・削除などが動きません。Apps Script に最新の Code.gs を貼って保存し、「デプロイ」→「デプロイを管理」→ 鉛筆（編集）→ バージョン「新しいバージョン」→「デプロイ」をしてください。</div>';
     document.getElementById('app').prepend(bar);
   }
@@ -674,6 +700,7 @@ async function loadAccounts(){
     set('acNet', yen(t.net)); set('acAssets', yen(t.assets)); set('acLiab', yen(t.liabilities)); set('acInvest', yen(t.invested));
     document.getElementById('acNet').classList.toggle('minus', t.net < 0);
     set('acAsOf', AC.asOf + ' 時点。初期残高と、入力したすべての伝票から計算しています。');
+    renderAccWarn();
     const row = a => `<button class="acc-row" data-acc="${esc(a.勘定科目ID)}"><span><span class="nm">${esc(a.勘定科目名)}</span>${a.投資フラグ ? ' <span class="pill">投資</span>' : ''}${a.グループ === '貸し借り（人）' && a.残高 ? ' <span class="pill' + (a.残高 > 0 ? '' : ' done') + '">' + (a.残高 > 0 ? '貸し' : '借り') + '</span>' : ''}<br><span class="sub">${a.分類 === '負債' ? '今月 使った ' + yen(a.今月の貸方) + '／返した ' + yen(a.今月の借方) : a.グループ === '貸し借り（人）' ? '今月 貸した ' + yen(a.今月の借方) + '／返してもらった・借りた ' + yen(a.今月の貸方) : '今月 入 ' + yen(a.今月の借方) + '／出 ' + yen(a.今月の貸方)}</span></span><span class="amt ${a.残高 < 0 ? 'minus' : ''}">${yen(a.残高)}</span></button>`;
     const grp = (label, list, total, note) => list.length ? `<div class="grp"><span>${label}</span><span>${yen(total)}</span></div>` + (note ? `<div class="note" style="margin-top:2px;">${note}</div>` : '') + list.map(row).join('') : '';
     const sum = l => l.reduce((s, a) => s + a.残高, 0);
@@ -781,18 +808,23 @@ function grpOpts(cls, sel){
   return list.map(g => `<option value="${esc(g)}"${g === sel ? ' selected' : ''}>${esc(g)}</option>`).join('');
 }
 function openAccountForm(a){
+  openAccountForm0(a); accFormCheck();
+}
+function openAccountForm0(a){
   const v = a || { 勘定科目名: '', 分類: '資産', 種別: '', 事業区分: '家計', 初期残高: 0, 家計反映対象: false, 投資フラグ: false, グループ: '銀行' };
   const pl = v.分類 === '収益' || v.分類 === '費用';
   const opt = (list, sel) => list.map(o => `<option value="${esc(o[0])}"${o[0] === sel ? ' selected' : ''}>${esc(o[1])}</option>`).join('');
   openSheet(a ? '科目を編集' : '科目を追加', `
     <label>科目名</label><input id="afName" value="${esc(v.勘定科目名)}" placeholder="例：〇〇銀行、現金、食費">
     <label>分類</label><select id="afCls">${opt([['資産', '資産（銀行・現金・電子マネー・投資・立替金）'], ['負債', '負債（クレジットカード・借入）'], ['収益', '収益（給与・副業などの収入）'], ['費用', '費用（食費・家賃などの支出）'], ['純資産', '純資産（残高調整など）']], v.分類)}</select>
-    <div id="afTaxBox" class="${v.分類 === '収益' ? '' : 'hidden'}"><label>税区分（税金の計算での扱い）</label><select id="afTax">${opt([['', '種別から自動（給与収入→源泉徴収あり／副業収入→事業・雑所得）'], ['給与（源泉徴収あり）', '給与（源泉徴収あり）…本業など'], ['給与（源泉徴収なし）', '給与（源泉徴収なし）…手取りは税金を引いて数える'], ['事業・雑所得', '事業・雑所得…副業の売上（経費を引く）'], ['非課税・対象外', '非課税・対象外…ポイント・利息など']], v.税区分の指定 !== undefined ? v.税区分の指定 : (v.税区分 || ''))}</select></div>
+    <div id="afTaxBox" class="${v.分類 === '収益' ? '' : 'hidden'}"><label>税区分（税金の計算での扱い）<span class="minus">*</span></label><select id="afTax">${opt([['', '（選んでください）'], ['給与（源泉徴収あり）', '給与（源泉徴収あり）…本業など'], ['給与（源泉徴収なし）', '給与（源泉徴収なし）…手取りは税金を引いて数える'], ['事業・雑所得', '事業・雑所得…副業の売上（経費を引く）'], ['非課税・対象外', '非課税・対象外…ポイント・利息など']], v.税区分の指定 !== undefined ? v.税区分の指定 : (v.税区分 || ''))}</select>
+      <button type="button" class="btn small outline" data-wz="open" style="margin-top:6px;">どれを選べばいい？</button><div id="afTaxWiz" class="refl hidden"></div></div>
     <div id="afTiBox" class="${v.分類 === '費用' || v.分類 === '資産' ? '' : 'hidden'}"><label>税の項目（この科目の伝票の合計を、税金の計算に自動で使う）</label><select id="afTi">${opt([['', 'なし'], ['所得税（源泉徴収）', '所得税（源泉徴収）'], ['住民税', '住民税'], ['社会保険料', '社会保険料（健保・年金・雇用・介護）'], ['生命保険料（一般）', '生命保険料（一般）'], ['介護医療保険料', '介護医療保険料（医療保険など）'], ['個人年金保険料', '個人年金保険料'], ['地震保険料', '地震保険料'], ['iDeCo・小規模企業共済', 'iDeCo・小規模企業共済（資産の口座）'], ['ふるさと納税（寄附）', 'ふるさと納税（寄附）']], v.税の項目 || '')}</select></div>
     <div id="afNwsBox" class="${v.分類 === '費用' ? '' : 'hidden'}"><label>Needs / Wants（50/30/20 の振り返りでの区分）</label><select id="afNws">${opt([['', '自動（固定費・年払い→Needs、変動費→Wants、税金→対象外）'], ['Needs', 'Needs（生活に必要）'], ['Wants', 'Wants（ほしいもの）'], ['対象外', '対象外（税金・寄附など。割合に入れない）']], v.NWS || '')}</select></div>
     <div id="afTypeBox" class="${pl ? '' : 'hidden'}"><label>種別（今月の残りのどこに数えるか）</label><select id="afType">${opt([['', '（なし＝費用なら変動費）'], ['給与収入', '給与収入'], ['副業収入', '副業収入'], ['その他収入', 'その他収入'], ['毎月固定費', '毎月固定費'], ['年払い固定費', '年払い固定費'], ['ローン', 'ローン（購入）'], ['変動費', '変動費']], v.種別)}</select></div>
     <div id="afGrpBox" class="${v.分類 === '資産' || v.分類 === '負債' ? '' : 'hidden'}"><label>グループ（口座画面での並び）</label><select id="afGrp">${grpOpts(v.分類, v.グループ)}</select></div>
     <label>事業区分</label><select id="afSeg">${opt([['家計', '家計'], ['副業', '副業'], ['共通', '共通']], v.事業区分 || '家計')}</select>
+    <div class="note" id="afSegNote" style="margin-top:4px;"></div><div id="afWarn"></div>
     <div id="afInitBox" class="${pl ? 'hidden' : ''}"><label>初期残高（使い始めの日の残高。カードは使った額をプラスで）</label><input id="afInit" type="number" inputmode="numeric" value="${Number(v.初期残高) || 0}"></div>
     <label class="opt" style="margin-top:12px;"><input type="checkbox" class="chk" id="afHH"${v.家計反映対象 ? ' checked' : ''}>家計（今月の残り）に数える</label>
     <div class="note" style="margin-top:4px;">収入・支出の科目はオン、銀行・現金・カード・立替金はオフにします。</div>
@@ -1164,7 +1196,7 @@ document.getElementById('nwNext').onclick = () => { NW.ym = shiftYm(NW.ym, 1); l
 document.getElementById('nwBack').onclick = () => showView('summary');
 
 // ---- 給与明細から入力（v1.18） ----
-const SAL = { on: false, ids: null };
+const SAL = { on: false, ids: null, mode: 'salary' };
 function taxClassOf(a){
   const t = String(a.税区分 || ''); if (t) return t;
   return a.種別 === '給与収入' ? '給与（源泉徴収あり）' : a.種別 === '副業収入' ? '事業・雑所得' : '非課税・対象外';
@@ -1191,14 +1223,28 @@ function salFromLines(){
   return p;
 }
 const optsOf = (list, sel) => list.map(a => `<option value="${esc(a.勘定科目ID)}"${a.勘定科目ID === sel ? ' selected' : ''}>${esc(a.勘定科目名)}</option>`).join('');
-async function salOn(p){
+function salMode(mode){
+  SAL.mode = mode;
+  const biz = mode === 'biz', g = id => document.getElementById(id);
+  g('slTitle').textContent = biz ? '報酬の明細（業務委託など）' : '給与明細';
+  g('slAccLab').textContent = biz ? '報酬の科目（事業・雑所得）' : '給与の科目';
+  g('slGrossLab').textContent = biz ? '報酬の額（請求した額）' : '額面（総支給額）';
+  g('slOtLab').textContent = biz ? '振込手数料など、ほかに引かれた額' : 'その他の天引き';
+  g('slOtAccLab').textContent = biz ? 'その科目（支払手数料など）' : 'その他の天引きの科目';
+  ['slRtBox', 'slSoBox', 'slBonusBox'].forEach(id => g(id).classList.toggle('hidden', biz));
+  g('slCalc').classList.toggle('hidden', !biz);
+  g('slNote').textContent = biz ? '入れると下の明細を自動で作ります（振込額＝報酬 − 引かれた額）。引かれた所得税は確定申告で精算されるので、税金の計算の源泉徴収税額に入ります。'
+    : '入れると下の明細を自動で作ります（振込額＝額面 − 天引き）。天引きは予算の元から引き、税金の計算（源泉徴収税額・社会保険料）に自動で入ります。';
+}
+async function salOn(p, mode){
+  salMode(mode || 'salary');
   const err = document.getElementById('inErr');
   try {
     if (!SAL.ids) { SAL.ids = await rpc('prepareSalaryAccounts', []); accountsCache = null; }
   } catch(e) { err.textContent = e.message; return; }
   const accs = await ensureAccounts();
   p = p || {};
-  const sal = accs.filter(a => a.分類 === '収益' && taxClassOf(a) === '給与（源泉徴収あり）');
+  const sal = accs.filter(a => a.分類 === '収益' && taxClassOf(a) === (SAL.mode === 'biz' ? '事業・雑所得' : '給与（源泉徴収あり）'));
   const banks = accs.filter(a => a.分類 === '資産');
   const firstBank = (banks.find(a => a.グループ === '銀行') || banks[0] || {}).勘定科目ID;
   document.getElementById('slAcc').innerHTML = optsOf(sal.length ? sal : accs.filter(a => a.分類 === '収益'), p.acc || (sal[0] || {}).勘定科目ID);
@@ -1212,7 +1258,9 @@ async function salOn(p){
   SAL.on = true;
   document.getElementById('inSal').classList.remove('hidden');
   document.getElementById('inSalAsk').classList.add('hidden');
+  document.getElementById('inBizAsk').classList.add('hidden');
   document.getElementById('inSalStart').classList.add('hidden');
+  if (SAL.mode === 'biz') { document.getElementById('slRt').value = ''; document.getElementById('slSo').value = ''; document.getElementById('slBonus').checked = false; }
   salApply();
 }
 function salOff(){
@@ -1238,7 +1286,7 @@ function setLinesSync(lines){
 function salApply(){
   const n = id => Math.max(0, Math.floor(Number(document.getElementById(id).value) || 0));
   const g = n('slGross'), it = n('slIt'), rt = n('slRt'), so = n('slSo'), ot = n('slOt');
-  const net = g - it - rt - so - ot, bonus = document.getElementById('slBonus').checked;
+  const net = g - it - rt - so - ot, bonus = SAL.mode !== 'biz' && document.getElementById('slBonus').checked;
   const ids = SAL.ids || {};
   document.getElementById('slNet').innerHTML = '振込額（手取り）＝ 額面 ' + yen(g) + ' − 天引き ' + yen(it + rt + so + ot) + ' ＝ <b class="' + (net < 0 ? 'minus' : '') + '">' + yen(net) + '</b>';
   const lines = [{ side: '借方', accountId: document.getElementById('slBank').value, amount: Math.max(0, net) }];
@@ -1247,7 +1295,7 @@ function salApply(){
   if (so) lines.push({ side: '借方', accountId: ids['社会保険料'], amount: so });
   if (ot) lines.push({ side: '借方', accountId: document.getElementById('slOtAcc').value, amount: ot });
   lines.push({ side: '貸方', accountId: document.getElementById('slAcc').value, amount: g, bonus: bonus });
-  if (!document.getElementById('inMemo').value) document.getElementById('inMemo').value = bonus ? '賞与' : '給与';
+  if (!document.getElementById('inMemo').value) document.getElementById('inMemo').value = SAL.mode === 'biz' ? '報酬' : bonus ? '賞与' : '給与';
   setLinesSync(lines);
 }
 document.getElementById('inSal').addEventListener('input', salApply);
@@ -1255,21 +1303,36 @@ document.getElementById('inSal').addEventListener('change', salApply);
 document.getElementById('inSalStart').onclick = () => salOn({});
 document.getElementById('inSalUse').onclick = () => salOn(salFromLines());
 document.getElementById('inSalOff').onclick = salOff;
+document.getElementById('inBizUse').onclick = () => salOn(salFromLines(), 'biz');
+document.getElementById('inBizNone').addEventListener('change', () => checkBalance());
+document.getElementById('slCalc').onclick = () => {      // 報酬の源泉徴収：100万円までは10.21%、超えた部分は20.42%
+  const g = Math.max(0, Math.floor(Number(document.getElementById('slGross').value) || 0));
+  document.getElementById('slIt').value = g <= 1000000 ? Math.floor(g * 0.1021) : Math.floor(1000000 * 0.1021 + (g - 1000000) * 0.2042);
+  salApply();
+};
 function salReset(){
-  SAL.on = false;
-  ['inSal', 'inSalAsk'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  SAL.on = false; SAL.mode = 'salary';
+  ['inSal', 'inSalAsk', 'inBizAsk'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  document.getElementById('inBizNone').checked = false;
   document.getElementById('inSalStart').classList.remove('hidden');
   document.getElementById('inNws').value = '';
 }
 /** 給与・Needs/Wants の入力チェック（checkBalance から呼ぶ）。戻り値：登録してよいか */
 function checkSalaryAndNws(el){
-  const need = hasWithheldSalary();
-  if (!SAL.on) document.getElementById('inSalAsk').classList.toggle('hidden', !need);
+  const need = hasWithheldSalary(), needBiz = !need && hasBizIncome();
+  if (!SAL.on) { document.getElementById('inSalAsk').classList.toggle('hidden', !need); document.getElementById('inBizAsk').classList.toggle('hidden', !needBiz); }
   let ok = true;
   if (SAL.on) {
+    const biz = SAL.mode === 'biz';
     ok = Number(document.getElementById('slGross').value) > 0 && document.getElementById('slIt').value !== '' && Number(document.getElementById('slIt').value) >= 0;
-    if (!ok) el.textContent += '　給与明細の額面と所得税を入れてください（所得税が無ければ0）';
+    if (!ok) el.textContent += biz ? '　報酬の額と、引かれた所得税を入れてください（引かれていなければ0）' : '　給与明細の額面と所得税を入れてください（所得税が無ければ0）';
+    const n = id => Math.max(0, Number(document.getElementById(id).value) || 0);
+    const net = n('slGross') - n('slIt') - (biz ? 0 : n('slRt') + n('slSo')) - n('slOt');
+    if (ok && net < 0) { ok = false; el.textContent += '　引かれた額の合計が' + (biz ? '報酬' : '額面') + 'より大きくなっています。金額を確かめてください'; }
+    if (ok && !biz && n('slIt') > n('slGross') * 0.45) { el.textContent += '　（所得税が額面の45%を超えています。桁を確かめてください）'; }
   } else if (need) { ok = false; el.textContent += '　給与の伝票は「給与明細の形で入れる」から、額面と所得税を入れてください'; }
+  else if (needBiz && !document.getElementById('inBizNone').checked) { ok = false; el.textContent += '　報酬から何か引かれていないか確かめてください（上の黄色い欄）'; }
+  entryTips();
   // Needs / Wants：収入の伝票（天引き）以外で、費用の明細があるときだけ選べる
   const m = accById(), lines = readLines();
   const isIncome = lines.some(l => l.side === '貸方' && m[l.accountId] && m[l.accountId].分類 === '収益');
@@ -1285,6 +1348,93 @@ function checkSalaryAndNws(el){
 }
 document.getElementById('inNws').addEventListener('change', () => checkBalance());
 
+
+// ---- 間違えにくくする工夫（v1.19） ----
+/* 税区分の選び方（科目の画面）：質問に答えると、税区分・種別・事業区分をそろえて選ぶ */
+const TAXWIZ_RESULT = {
+  wh: { tax: '給与（源泉徴収あり）', type: '給与収入', seg: '家計', why: '会社に雇われていて、給与から所得税が引かれている → 「給与（源泉徴収あり）」。入力は「給与明細から入力」で、額面と天引きを入れます。' },
+  nowh: { tax: '給与（源泉徴収なし）', type: '副業収入', seg: '副業', why: '雇われて働く給与だけれど、所得税が引かれていない → 「給与（源泉徴収なし）」。振り込まれた額をそのまま額面として入れます。翌月の予算は、あとで払う税金の見込みを引いた手取りで組みます。' },
+  biz: { tax: '事業・雑所得', type: '副業収入', seg: '副業', why: '業務委託・請負などで、自分で仕事を受けて報酬をもらう → 「事業・雑所得」。事業区分「副業」の経費を、この収入から引けます。報酬から10.21%引かれている場合は、入力画面の「報酬の明細で入れる」を使います。' },
+  other: { tax: '非課税・対象外', type: 'その他収入', seg: '家計', why: 'ポイント・預金の利息・お祝い・返金など → 「非課税・対象外」。税金の計算には入れません（利息の税金は引かれて終わっています）。' }
+};
+function taxWizHtml(step){
+  if (step === 'salary') return `<div class="sub" style="margin-bottom:6px;">給与から<b>所得税</b>が引かれていますか？（給与明細に所得税の欄があって金額が入っている／年末に源泉徴収票が届く → 引かれている）</div>
+    <div class="row" style="flex-wrap:wrap;"><button type="button" class="btn small" data-wz="wh">引かれている</button><button type="button" class="btn small outline" data-wz="nowh">引かれていない</button><button type="button" class="btn small outline" data-wz="start">← 戻る</button></div>`;
+  return `<div class="sub" style="margin-bottom:6px;">この収入はどれですか？</div>
+    <div style="display:grid;gap:6px;">
+      <button type="button" class="btn small outline" data-wz="salary" style="text-align:left;">会社などに<b>雇われて</b>もらう給料（指示どおり・決まった時間で働く）</button>
+      <button type="button" class="btn small outline" data-wz="biz" style="text-align:left;"><b>業務委託・請負</b>の報酬（自分で仕事を受ける／請求書を出す）</button>
+      <button type="button" class="btn small outline" data-wz="other" style="text-align:left;">ポイント・利息・お祝い・返金など</button>
+    </div>`;
+}
+function accFormCheck(){
+  const g = id => document.getElementById(id);
+  if (!g('afCls')) return;
+  const c = g('afCls').value, seg = g('afSeg').value, warn = [];
+  const segNote = c === '費用' ? (seg === '副業' ? '副業の経費：業務委託などの報酬（事業・雑所得）から引きます。副業の給与からは引けません。' : '生活の支出（家計）。税金には関係しません。')
+    : c === '収益' ? '収入の科目では計算に使いません（整理用の印）。税金での扱いは上の「税区分」で決まります。' : '口座などは計算に使いません（整理用の印）。両方で使う口座は「共通」に。';
+  g('afSegNote').textContent = segNote;
+  if (c === '収益') {
+    const tax = g('afTax').value, type = g('afType').value;
+    if (!tax) warn.push('税区分を選んでください。迷ったら「どれを選べばいい？」で質問に答えると決まります。');
+    if (tax === '事業・雑所得' && type === '給与収入') warn.push('種別が「給与収入」ですが、税区分は「事業・雑所得」です。業務委託の報酬なら、種別は「副業収入」にします。');
+    if ((tax === '給与（源泉徴収あり）' || tax === '給与（源泉徴収なし）') && type === 'その他収入') warn.push('税区分は給与ですが、種別が「その他収入」です。給与なら「給与収入」か「副業収入」にします。');
+    if (tax === '非課税・対象外' && (type === '給与収入' || type === '副業収入')) warn.push('種別は給与・副業ですが、税区分が「非課税・対象外」です。税金の計算に入らなくなります。');
+  }
+  if (c === '費用' && seg === '副業' && (accountsCache || []).length && !(accountsCache || []).some(a => a.分類 === '収益' && taxClassOf(a) === '事業・雑所得'))
+    warn.push('事業・雑所得の収入の科目がまだありません。副業の経費は、業務委託などの報酬（税区分「事業・雑所得」）からしか引けません。');
+  g('afWarn').innerHTML = warn.map(w => '<div class="line" style="background:#fff8e1;border-color:#ffe082;font-size:12px;margin-top:6px;">⚠️ ' + esc(w) + '</div>').join('');
+}
+document.getElementById('sheet').addEventListener('click', e => {
+  const b = e.target.closest('[data-wz]'); if (!b) return;
+  const box = document.getElementById('afTaxWiz'), k = b.dataset.wz;
+  if (k === 'open') { box.classList.toggle('hidden'); box.innerHTML = taxWizHtml('start'); return; }
+  if (k === 'start' || k === 'salary') { box.innerHTML = taxWizHtml(k); return; }
+  const r = TAXWIZ_RESULT[k]; if (!r) return;
+  document.getElementById('afTax').value = r.tax; document.getElementById('afType').value = r.type; document.getElementById('afSeg').value = r.seg;
+  box.innerHTML = `<div class="ok" style="margin-top:0;line-height:1.7;">✔ 税区分「${esc(r.tax)}」・種別「${esc(r.type)}」・事業区分「${esc(r.seg)}」にしました。</div><div class="sub" style="line-height:1.7;margin-top:4px;">${esc(r.why)}</div>
+    <button type="button" class="btn small outline" data-wz="start" style="margin-top:6px;">選び直す</button>`;
+  accFormCheck();
+});
+document.getElementById('sheet').addEventListener('change', e => { if (['afCls', 'afTax', 'afType', 'afSeg'].indexOf(e.target.id) >= 0) accFormCheck(); });
+document.getElementById('sheet').addEventListener('click', e => {
+  if (e.target.id !== 'afSave') return;
+  const c = document.getElementById('afCls'), t = document.getElementById('afTax');
+  if (c && c.value === '収益' && t && !t.value) {     // 収入の科目は税区分を必ず選ぶ
+    e.stopImmediatePropagation();
+    document.getElementById('afMsg').textContent = '収入の科目は「税区分」を選んでください（迷ったら「どれを選べばいい？」）';
+  }
+}, true);
+/* 口座タブ：税区分を選んでいない収入の科目を知らせる */
+function renderAccWarn(){
+  const el = document.getElementById('acWarn'); if (!el || !AC) return;
+  const list = AC.accounts.filter(a => a.分類 === '収益' && a.家計反映対象 && !a.税区分の指定);
+  el.innerHTML = list.length ? `<div class="card" style="background:#fff8e1;"><div class="sec">⚠️ 税区分を選んでいない収入の科目があります</div>
+    <div class="sub" style="line-height:1.7;">給与か業務委託かで税金の計算が変わります。タップして選んでください（いまは種別から自動で決めています）。</div>
+    <div class="row" style="flex-wrap:wrap;margin-top:8px;">${list.map(a => `<button class="btn small outline" data-acfix="${esc(a.勘定科目ID)}">${esc(a.勘定科目名)}（いまは${esc(a.税区分)}）</button>`).join('')}</div></div>` : '';
+}
+document.getElementById('acWarn').addEventListener('click', e => {
+  const b = e.target.closest('[data-acfix]'); if (!b) return;
+  e.stopPropagation();
+  ensureAccounts().then(() => { openAccountForm(AC.accounts.find(a => a.勘定科目ID === b.dataset.acfix)); accFormCheck(); });
+});
+/* 入力画面：その伝票に合わせた注意 */
+function hasBizIncome(){
+  const m = accById();
+  return readLines().some(l => l.side === '貸方' && l.amount > 0 && m[l.accountId] && m[l.accountId].分類 === '収益' && taxClassOf(m[l.accountId]) === '事業・雑所得');
+}
+function entryTips(){
+  const m = accById(), lines = readLines(), tips = [];
+  const credIncome = lines.filter(l => l.side === '貸方' && m[l.accountId] && m[l.accountId].分類 === '収益');
+  if (!SAL.on && credIncome.some(l => taxClassOf(m[l.accountId]) === '給与（源泉徴収なし）'))
+    tips.push('源泉徴収なしの給与として入れます（振り込まれた額＝額面）。翌月の予算は、あとで払う税金の見込みを引いた手取りで組みます。<br>業務委託の報酬なら、科目の税区分を「事業・雑所得」にしてください（経費を引けるのはそちらだけです）。');
+  if (credIncome.some(l => !m[l.accountId].税区分)) tips.push('この収入の科目は税区分をまだ選んでいません（口座タブで科目を開いて選べます）。');
+  const bizExp = lines.some(l => l.side === '借方' && m[l.accountId] && m[l.accountId].分類 === '費用' && (m[l.accountId].事業区分 === '副業' || l.segment === '副業'));
+  if (bizExp && !credIncome.length) tips.push('副業の経費として、業務委託などの報酬（事業・雑所得）から引きます。副業の<b>給与</b>からは引けません。');
+  const big = lines.filter(l => l.amount >= 1000000);
+  if (big.length) tips.push('100万円以上の金額があります。桁を確かめてください。');
+  document.getElementById('inTips').innerHTML = tips.map(t => '<div class="line" style="background:#f5f8ff;border-color:#c9dafc;font-size:12px;line-height:1.7;">💡 ' + t + '</div>').join('');
+}
 
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function localToday(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
@@ -1447,7 +1597,8 @@ async function fillEdit(){
   salReset();
   document.getElementById('inNws').value = e.nws || '';
   checkBalance();
-  if (hasWithheldSalary()) { const sp = salFromLines(); if (sp.it !== undefined) await salOn(sp); }   // 所得税の行がある給与の伝票は、給与明細の形で開く
+  if (hasWithheldSalary()) { const sp = salFromLines(); if (sp.it !== undefined) await salOn(sp); }
+  else if (hasBizIncome()) { const sp = salFromLines(); if (sp.it !== undefined || sp.ot !== undefined) await salOn(sp, 'biz'); else { document.getElementById('inBizNone').checked = true; checkBalance(); } }   // 所得税の行がある給与の伝票は、給与明細の形で開く
 }
 async function prepareInput(){
   if (EDIT) return fillEdit();
