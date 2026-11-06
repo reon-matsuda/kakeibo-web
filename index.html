@@ -591,7 +591,7 @@ async function rpc(method, args){
 
 // ---- キーゲート ----
 let ME = { mode: 'owner' };
-const NEED_SERVER_BUILD = 22;   // この画面が必要とするサーバーの版（Code.gs の SERVER_BUILD）
+const NEED_SERVER_BUILD = 23;   // この画面が必要とするサーバーの版（Code.gs の SERVER_BUILD）
 async function showApp(){
   const gateErr = document.getElementById('gateErr');
   try {
@@ -610,7 +610,7 @@ async function showApp(){
     bar.id = 'oldServer';
     bar.className = 'card';
     bar.style.cssText = 'background:#fff4e5;border:1px solid #f0b46a;margin-top:0;';
-    bar.innerHTML = '<b>⚠️ サーバーが古い版のままです</b><div class="sub" style="margin-top:4px;line-height:1.7;">画面は v1.22 ですが、Apps Script は ' + (ME.build ? 'v1.' + ME.build : 'v1.15 以前') +
+    bar.innerHTML = '<b>⚠️ サーバーが古い版のままです</b><div class="sub" style="margin-top:4px;line-height:1.7;">画面は v1.23 ですが、Apps Script は ' + (ME.build ? 'v1.' + ME.build : 'v1.15 以前') +
       ' です。このままだと伝票の編集・削除などが動きません。Apps Script に最新の Code.gs を貼って保存し、「デプロイ」→「デプロイを管理」→ 鉛筆（編集）→ バージョン「新しいバージョン」→「デプロイ」をしてください。</div>';
     document.getElementById('app').prepend(bar);
   }
@@ -1338,7 +1338,7 @@ function salFromLines(){
   });
   return p;
 }
-const optsOf = (list, sel) => list.map(a => `<option value="${esc(a.勘定科目ID)}"${a.勘定科目ID === sel ? ' selected' : ''}>${esc(a.勘定科目名)}</option>`).join('');
+const optsOf = (list, sel) => list.map(a => `<option value="${esc(a.勘定科目ID)}"${a.勘定科目ID === sel ? ' selected' : ''}>${esc(accLabel(a))}</option>`).join('');
 function salMode(mode){
   SAL.mode = mode;
   const biz = mode === 'biz', g = id => document.getElementById(id);
@@ -1391,7 +1391,7 @@ function setLinesSync(lines){
   lines.forEach((l, i) => {
     wrap.insertAdjacentHTML('beforeend', lineHtml(i));
     const row = wrap.lastElementChild, sel = row.querySelector('.ln-account');
-    sel.innerHTML = accs.map(a => `<option value="${esc(a.勘定科目ID)}">${esc(a.勘定科目名)}</option>`).join('');
+    sel.innerHTML = accs.map(a => `<option value="${esc(a.勘定科目ID)}">${esc(accLabel(a, accs))}</option>`).join('');
     row.querySelector('.ln-side').value = l.side; sel.value = l.accountId;
     row.querySelector('.ln-amount').value = l.amount || '';
     row.querySelector('.ln-bonus').checked = !!l.bonus;
@@ -1529,10 +1529,15 @@ document.getElementById('sheet').addEventListener('click', e => {
 /* 口座タブ：税区分を選んでいない収入の科目を知らせる */
 function renderAccWarn(){
   const el = document.getElementById('acWarn'); if (!el || !AC) return;
+  const dups = AC.duplicates || [];
+  const dupHtml = dups.length ? `<div class="card" style="background:#fff8e1;"><div class="sec">⚠️ 同じ名前の科目があります</div>
+    <div class="sub" style="line-height:1.7;">入力の選択肢で見分けがつかず、違うほうを選んでしまうことがあります。使わないほうの名前を変えるか（例：「交際費（副業）」）、事業区分を確かめてください。</div>
+    ${dups.map(d => `<div style="margin-top:8px;"><b>${esc(d.name)}</b><div class="row" style="flex-wrap:wrap;margin-top:4px;">${d.accounts.map(a => `<button class="btn small outline" data-acfix="${esc(a.勘定科目ID)}">${esc(a.勘定科目名)}（${esc(a.分類)}・${esc(a.事業区分 || '家計')}）</button>`).join('')}</div></div>`).join('')}</div>` : '';
   const list = AC.accounts.filter(a => a.分類 === '収益' && a.家計反映対象 && !a.税区分の指定);
   el.innerHTML = list.length ? `<div class="card" style="background:#fff8e1;"><div class="sec">⚠️ 税区分を選んでいない収入の科目があります</div>
     <div class="sub" style="line-height:1.7;">給与か業務委託かで税金の計算が変わります。タップして選んでください（いまは種別から自動で決めています）。</div>
     <div class="row" style="flex-wrap:wrap;margin-top:8px;">${list.map(a => `<button class="btn small outline" data-acfix="${esc(a.勘定科目ID)}">${esc(a.勘定科目名)}（いまは${esc(a.税区分)}）</button>`).join('')}</div></div>` : '';
+  el.innerHTML = dupHtml + el.innerHTML;
 }
 document.getElementById('acWarn').addEventListener('click', e => {
   const b = e.target.closest('[data-acfix]'); if (!b) return;
@@ -1559,6 +1564,17 @@ function privateTwin(a){
   if (!base || base === a.勘定科目名) return (accountsCache || []).find(x => x.分類 === '費用' && x.勘定科目ID !== a.勘定科目ID && x.事業区分 !== '副業' && x.勘定科目名 === a.勘定科目名) || null;
   return (accountsCache || []).find(x => x.分類 === '費用' && x.勘定科目ID !== a.勘定科目ID && x.事業区分 !== '副業' && x.勘定科目名 === base) || null;
 }
+/* ヒントの「この科目を開いて確かめる」：その科目の編集画面を、最新の情報で開く */
+document.getElementById('inTips').addEventListener('click', async e => {
+  const b = e.target.closest('[data-open-acc]'); if (!b) return;
+  try {
+    const bal = await rpc('getAccountBalances', []); AC = bal;
+    accountsCache = null; await ensureAccounts();
+    const a = bal.accounts.find(x => x.勘定科目ID === b.dataset.openAcc);
+    if (!a) throw new Error('科目が見つかりません（消された可能性があります）');
+    openAccountForm(a);
+  } catch(err) { document.getElementById('inErr').textContent = err.message; }
+});
 /* 入力画面：その伝票に合わせた注意 */
 function hasBizIncome(){
   const m = accById();
@@ -1576,7 +1592,7 @@ function entryTips(){
     tips.push('<b>副業の経費</b>として数えます（業務委託などの報酬＝事業・雑所得から引きます。副業の<b>給与</b>からは引けません）。<br>' +
       '経費にできるのは、<b>副業の仕事のために使った分だけ</b>です。' +
       bizLines.map(l => { const a = m[l.accountId];
-        return a.事業区分 === '副業' ? '<br>（理由：科目「' + esc(a.勘定科目名) + '」の<b>事業区分が「副業」</b>になっています。' + (/副業/.test(a.勘定科目名) ? '' : '私用の科目なら、口座タブでこの科目を開き、事業区分を「家計」に直してください。') + '）'
+        return a.事業区分 === '副業' ? '<br>（理由：この明細で選んでいる科目「' + esc(accLabel(a)) + '」の<b>事業区分が「副業」</b>になっています。' + (/副業/.test(a.勘定科目名) ? '' : '私用の支出なら、明細の科目を家計の科目に選び直すか、この科目の事業区分を「家計」に直してください。') + '）<button type="button" class="btn small outline" data-open-acc="' + esc(a.勘定科目ID) + '" style="margin:4px 0 0;">この科目を開いて確かめる</button>'
           : '<br>（理由：「' + esc(a.勘定科目名) + '」の明細の区分を<b>「副業」</b>にしています。私用なら「家計」に戻してください。）'; }).filter((x, i, arr) => arr.indexOf(x) === i).join('') +
       accs.map(a => { const h = expenseHint(a.勘定科目名); const alt = privateTwin(a); return (h ? '<br>・' + esc(a.勘定科目名) + '：' + h : '') + (alt ? '<br>　私用の分なら、家計の「' + esc(alt.勘定科目名) + '」を使ってください。' : ''); }).join('') +
       '<br>仕事と私用が混ざる支払い（スマホ代など）は、明細を2行に分けて、仕事の分だけを副業の科目にします。');
@@ -1634,7 +1650,7 @@ function renderSplit(biz, lines, m){
     return `<div class="line" style="background:#f5f8ff;border-color:#c9dafc;font-size:12px;line-height:1.7;">
       <b>「${esc(a.勘定科目名)}」${yen(l.amount)} を仕事と私用に分ける（按分）</b>
       <div class="row" style="flex-wrap:wrap;margin-top:4px;"><span>仕事の割合</span><input type="number" inputmode="numeric" class="sp-pct" data-idx="${i}" min="1" max="99" placeholder="50" style="width:80px;"><span>%</span></div>
-      <div class="row" style="margin-top:4px;"><span style="white-space:nowrap;">私用の分の科目</span><select class="sp-acc" data-idx="${i}" style="flex:1;">${priv.map(x => `<option value="${esc(x.勘定科目ID)}"${x.勘定科目ID === dflt ? ' selected' : ''}>${esc(x.勘定科目名)}</option>`).join('')}</select></div>
+      <div class="row" style="margin-top:4px;"><span style="white-space:nowrap;">私用の分の科目</span><select class="sp-acc" data-idx="${i}" style="flex:1;">${priv.map(x => `<option value="${esc(x.勘定科目ID)}"${x.勘定科目ID === dflt ? ' selected' : ''}>${esc(accLabel(x))}</option>`).join('')}</select></div>
       <button type="button" class="btn small sp-go" data-idx="${i}" style="margin-top:6px;">2行に分ける</button>
       <div class="note" style="margin-top:2px;">仕事の分は今の科目（副業の経費）に、残りは私用の科目（家計）に入れます。割合の決め方（使った時間・回数など）も摘要に書いておくと安心です。</div></div>`;
   }).join('');
@@ -1989,11 +2005,20 @@ function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&'
 function localToday(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 
 // ---- 入力 ----
-let accountsCache = null;
+let accountsCache = null, accountsAt = 0;
+/** 科目の一覧。別の端末で科目を直したときに古いまま使い続けないよう、2分たったら取り直す */
 async function ensureAccounts(){
-  if (accountsCache) return accountsCache;
-  accountsCache = await rpc('getAccounts', []);
+  if (accountsCache && Date.now() - accountsAt < 120000) return accountsCache;
+  accountsCache = await rpc('getAccounts', []); accountsAt = Date.now();
   return accountsCache;
+}
+const nameKey = n => String(n || '').normalize('NFKC').replace(/\s+/g, '');
+/** 選択肢に出す名前：副業の科目には［副業］を付ける。同じ名前の科目が2つあれば分類・事業区分も添える */
+function accLabel(a, accs){
+  const n = String(a.勘定科目名 || '');
+  const dup = (accs || accountsCache || []).filter(x => nameKey(x.勘定科目名) === nameKey(n)).length > 1;
+  if (dup) return n + '［' + (a.分類 || '') + '・' + (a.事業区分 || '家計') + '］';
+  return a.事業区分 === '副業' && !/副業/.test(n) ? n + '［副業］' : n;
 }
 function lineHtml(idx){
   return `<div class="line" data-idx="${idx}">
@@ -2018,7 +2043,7 @@ async function addLine(){
   const row = wrap.lastElementChild;
   const accs = await ensureAccounts();
   const sel = row.querySelector('.ln-account');
-  sel.innerHTML = accs.map(a => `<option value="${esc(a.勘定科目ID)}">${esc(a.勘定科目名)}</option>`).join('');
+  sel.innerHTML = accs.map(a => `<option value="${esc(a.勘定科目ID)}">${esc(accLabel(a, accs))}</option>`).join('');
   if (idx === 1) row.querySelector('.ln-side').value = '貸方';
   row.querySelectorAll('input,select').forEach(el => el.addEventListener('input', checkBalance));
   checkBalance();
@@ -2173,7 +2198,7 @@ async function prepareInput(){
   const accs = await ensureAccounts();
   document.querySelectorAll('#inLines .ln-account').forEach(sel => {      // 科目を追加・変更したあとも選べるように作り直す
     const v = sel.value;
-    sel.innerHTML = accs.map(a => `<option value="${esc(a.勘定科目ID)}">${esc(a.勘定科目名)}</option>`).join('');
+    sel.innerHTML = accs.map(a => `<option value="${esc(a.勘定科目ID)}">${esc(accLabel(a, accs))}</option>`).join('');
     if (v) sel.value = v;
   });
   if (!document.querySelectorAll('#inLines .line').length) { await addLine(); await addLine(); }
