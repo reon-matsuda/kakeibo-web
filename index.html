@@ -91,6 +91,31 @@
   table.hist th{color:var(--sub);font-weight:600;}
   .hist-wrap{overflow-x:auto;}
   .ent{padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;display:flex;justify-content:space-between;gap:8px;}
+  /* ---- v1.18：円グラフ ---- */
+  :root{--c-needs:#2a78d6;--c-wants:#eb6834;--c-savings:#1baf7a;--c-track:#e6e9ee;--c-over:#d03b3b;}
+  .donut-row{display:flex;align-items:center;gap:14px;margin-top:12px;}
+  .donut{position:relative;flex:0 0 auto;}
+  .donut svg{display:block;}
+  .donut .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.15;}
+  .donut .ctr b{font-size:22px;font-variant-numeric:tabular-nums;}
+  .donut .ctr span{font-size:11px;color:var(--sub);}
+  .donut-side{flex:1;min-width:0;font-size:13px;}
+  .donut-side .kv{display:flex;justify-content:space-between;gap:6px;padding:3px 0;}
+  .donut-side .kv b{font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;}
+  .nw-pair{display:flex;justify-content:space-around;gap:8px;margin-top:10px;}
+  .nw-pair .cap{text-align:center;font-size:12px;color:var(--sub);margin-top:4px;}
+  table.nw{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;font-variant-numeric:tabular-nums;}
+  table.nw th,table.nw td{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;}
+  table.nw th:first-child,table.nw td:first-child{text-align:left;}
+  table.nw th{color:var(--sub);font-weight:600;font-size:11px;}
+  .refl{background:#f6f7f9;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:13px;line-height:1.7;}
+  .refl div+div{margin-top:4px;}
+  .sal{border:1px solid #c9dafc;background:#f5f8ff;border-radius:10px;padding:10px 12px;margin-top:12px;}
+  .sal .g2{display:grid;grid-template-columns:1fr 1fr;gap:0 8px;}
+  .tx-item{border-bottom:1px solid var(--line);padding:8px 0;}
+  .tx-item .eq{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.6;}
+  .tx-item .row input{flex:0 0 46%;}
 </style>
 
 </head>
@@ -114,11 +139,16 @@
       <button class="btn small outline" id="sumReload">更新</button>
     </div>
     <button class="hero-main" data-detail="perDay"><span class="sub">1日あたり使える額</span><span class="big" id="perDay">－</span></button>
+    <button class="donut-row" id="budgetBox" data-detail="freeLeft" style="width:100%;border:none;background:none;padding:0;text-align:left;font:inherit;color:inherit;cursor:pointer;" aria-label="今月の予算の使用状況"></button>
     <div class="grid2">
       <button class="stat" data-detail="freeLeft"><div class="k">自由費残高（繰越込）</div><div class="v" id="freeLeft">－</div></button>
       <div class="stat"><div class="k">残り日数</div><div class="v" id="remainDays">－</div></div>
     </div>
     <div id="sumAlerts"></div>
+  </div>
+  <div class="card" id="nwsHome">
+    <div class="row" style="justify-content:space-between;"><div class="sec" style="margin:0;">今月の Needs / Wants / Savings</div><button class="btn small outline" id="nwsOpen">振り返る ›</button></div>
+    <div id="nwsHomeBody" class="sub" style="margin-top:8px;">－</div>
   </div>
   <div class="card">
     <div class="sec">今月の予算の元</div>
@@ -144,6 +174,21 @@
     <div id="historyBox"></div>
     <div class="note" id="sumNote"></div>
   </div>
+</div>
+
+<!-- Needs / Wants / Savings（v1.18） -->
+<div id="view-nws" class="hidden">
+  <div class="card">
+    <div class="row" style="justify-content:space-between;"><strong>Needs / Wants / Savings</strong><button class="btn small outline" id="nwBack">← ホーム</button></div>
+    <div class="row" style="justify-content:center;gap:16px;margin-top:10px;">
+      <button class="btn small outline" id="nwPrev" aria-label="前の月">‹ 前の月</button><b id="nwYm" style="min-width:90px;text-align:center;">－</b><button class="btn small outline" id="nwNext" aria-label="次の月">次の月 ›</button>
+    </div>
+    <div id="nwBody"></div>
+    <div id="nwErr" class="err"></div>
+  </div>
+  <div class="card"><div class="sec">内訳（多い順）</div><div id="nwItems" class="sub">－</div>
+    <div class="note">区分は、口座タブで科目を開いて「Needs / Wants」を選ぶと変わります（1件だけ変えたいときは、伝票の入力・編集で個別に選べます）。</div></div>
+  <div class="card"><div class="sec">月ごとの推移</div><div id="nwTrend" class="sub">－</div></div>
 </div>
 
 <!-- 口座（v1.8） -->
@@ -185,8 +230,31 @@
   <input type="date" id="inDate">
   <label>摘要</label>
   <input type="text" id="inMemo" placeholder="例：スーパーで食材">
+  <button class="btn outline small" id="inSalStart" style="margin-top:10px;">給与明細から入力（額面・天引きから伝票を作る）</button>
+  <div id="inSalAsk" class="line hidden" style="background:#fff8e1;border-color:#ffe082;font-size:13px;">給与（源泉徴収あり）の伝票です。税金の計算に使うので、<b>額面</b>と<b>天引き（所得税など）</b>を入れてください。<button type="button" class="btn small" id="inSalUse" style="margin-top:6px;">給与明細の形で入れる</button></div>
+  <div id="inSal" class="sal hidden">
+    <div class="row" style="justify-content:space-between;"><b style="font-size:13px;">給与明細</b><button type="button" class="btn small outline" id="inSalOff">ふつうの入力に戻す</button></div>
+    <div class="g2">
+      <div><label>給与の科目</label><select id="slAcc"></select></div>
+      <div><label>振込先の口座</label><select id="slBank"></select></div>
+      <div><label>額面（総支給額）<span class="minus">*</span></label><input type="number" inputmode="numeric" id="slGross" placeholder="例：300000"></div>
+      <div><label>所得税（源泉徴収）<span class="minus">*</span></label><input type="number" inputmode="numeric" id="slIt" placeholder="無ければ 0"></div>
+      <div><label>住民税</label><input type="number" inputmode="numeric" id="slRt" placeholder="0"></div>
+      <div><label>社会保険料（健保・年金・雇用・介護の合計）</label><input type="number" inputmode="numeric" id="slSo" placeholder="0"></div>
+      <div><label>その他の天引き</label><input type="number" inputmode="numeric" id="slOt" placeholder="0"></div>
+      <div><label>その他の天引きの科目</label><select id="slOtAcc"></select></div>
+    </div>
+    <label class="opt" style="margin-top:10px;"><input type="checkbox" class="chk" id="slBonus">賞与（ボーナス）</label>
+    <div id="slNet" class="sub" style="margin-top:8px;"></div>
+    <div class="note" style="margin-top:4px;">入れると下の明細を自動で作ります（振込額＝額面 − 天引き）。天引きは予算の元から引き、税金の計算（源泉徴収税額・社会保険料）に自動で入ります。</div>
+  </div>
   <div id="inLines"></div>
   <button class="btn outline small" id="inAddLine" style="margin-top:10px;">＋ 明細を追加</button>
+  <div id="inNwsBox" class="hidden">
+    <label>Needs / Wants（ふだんは科目の設定どおり）</label>
+    <select id="inNws"><option value="">自動（科目の設定どおり）</option><option value="Needs">Needs（生活に必要）</option><option value="Wants">Wants（ほしいもの）</option><option value="対象外">対象外（税金など）</option></select>
+    <div id="inNwsNote" class="note" style="margin-top:4px;"></div>
+  </div>
   <label>種別（ふだんは科目から自動で入ります。必要なときは選び直せます）</label>
   <select id="inType">
     <option value="">（選んでください）</option>
@@ -205,7 +273,7 @@
 <!-- 設定（率・年払い固定費・ローン） -->
 <!-- 副業の税金（v1.17） -->
 <div id="view-tax" class="card hidden">
-  <div class="row" style="justify-content:space-between;"><strong>副業の税金（見込み）</strong><button class="btn small outline" id="txBack">← メニュー</button></div>
+  <div class="row" style="justify-content:space-between;"><strong>税金の見込み</strong><button class="btn small outline" id="txBack">← メニュー</button></div>
   <div class="row" style="margin-top:8px;"><label style="margin:0;">年</label><select id="txYear" style="flex:1;"></select></div>
   <div id="txAlerts"></div>
   <div class="hero-main" style="cursor:default;margin-top:6px;"><span class="sub">副業で増える税金（所得税＋翌年の住民税）</span><span class="big" id="txSide">－</span></div>
@@ -214,9 +282,10 @@
     <div class="stat"><div class="k">確定申告で納める所得税（見込み）</div><div class="v" id="txPay">－</div></div>
   </div>
   <div class="note" id="txRateNote"></div>
+  <div id="txFuru"></div>
   <details class="bdbox"><summary>計算の内訳</summary><div id="txCalc"></div></details>
   <div class="sec" style="margin-top:16px;">情報を入れる（<span id="txYearLabel"></span>年分・年額）</div>
-  <div class="note">本業の額面と源泉徴収税額は、源泉徴収票（見込み）の数字です。保険料などは「科目から集計」を選ぶと、その科目の伝票の合計（その年の分）を自動で使います。</div>
+  <div class="note" style="line-height:1.7;">ふだんは伝票から自動で集めます（給与は「給与明細から入力」で額面と天引きを、保険料・iDeCo・ふるさと納税は口座タブで科目の「税の項目」を選んでおきます）。集計開始月より前の分や、親が払っている保険料など伝票に載らない分だけ「手入力」に足してください。</div>
   <div id="txForm"></div>
   <button class="btn" id="txSave" style="margin-top:12px;width:100%;">保存して計算し直す</button>
   <div id="txMsg" class="err"></div>
@@ -229,7 +298,7 @@
     <button class="btn small outline" data-open-list="accounts">勘定科目</button><button class="btn small outline" data-open-list="annual">年払い固定費</button>
     <button class="btn small outline" data-open-list="loans">ローン</button><button class="btn small outline" data-open-list="people">人・割り勘メンバー</button>
   </div>
-  <button class="btn outline" id="openTax" style="margin-top:12px;width:100%;">副業の税金（見込み）・保険などの控除</button>
+  <button class="btn outline" id="openTax" style="margin-top:12px;width:100%;">税金の見込み（副業・ふるさと納税・保険などの控除）</button>
   <hr style="border:0;border-top:1px solid var(--line);margin:18px 0;">
   <strong>基本設定</strong>
   <div class="row"><div style="flex:1;"><label>貯蓄率（%）</label><input type="number" id="stSave" step="0.1"></div>
@@ -392,7 +461,7 @@ async function rpc(method, args){
 
 // ---- キーゲート ----
 let ME = { mode: 'owner' };
-const NEED_SERVER_BUILD = 17;   // この画面が必要とするサーバーの版（Code.gs の SERVER_BUILD）
+const NEED_SERVER_BUILD = 18;   // この画面が必要とするサーバーの版（Code.gs の SERVER_BUILD）
 async function showApp(){
   const gateErr = document.getElementById('gateErr');
   try {
@@ -410,7 +479,7 @@ async function showApp(){
     bar.id = 'oldServer';
     bar.className = 'card';
     bar.style.cssText = 'background:#fff4e5;border:1px solid #f0b46a;margin-top:0;';
-    bar.innerHTML = '<b>⚠️ サーバーが古い版のままです</b><div class="sub" style="margin-top:4px;line-height:1.7;">画面は v1.17 ですが、Apps Script は ' + (ME.build ? 'v1.' + ME.build : 'v1.15 以前') +
+    bar.innerHTML = '<b>⚠️ サーバーが古い版のままです</b><div class="sub" style="margin-top:4px;line-height:1.7;">画面は v1.18 ですが、Apps Script は ' + (ME.build ? 'v1.' + ME.build : 'v1.15 以前') +
       ' です。このままだと伝票の編集・削除などが動きません。Apps Script に最新の Code.gs を貼って保存し、「デプロイ」→「デプロイを管理」→ 鉛筆（編集）→ バージョン「新しいバージョン」→「デプロイ」をしてください。</div>';
     document.getElementById('app').prepend(bar);
   }
@@ -437,7 +506,7 @@ document.getElementById('gateGo').onclick = () => {
 if (getKey()) { showApp(); }
 
 // ---- 画面の切り替え（v1.8） ----
-const VIEWS = ['summary', 'input', 'lists', 'accounts', 'warikan', 'settings', 'tax'];
+const VIEWS = ['summary', 'input', 'lists', 'accounts', 'warikan', 'settings', 'tax', 'nws'];
 function showView(v, opt){
   VIEWS.forEach(t => document.getElementById('view-' + t).classList.toggle('hidden', t !== v));
   document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('active', b.dataset.tab === v));
@@ -450,6 +519,7 @@ function showView(v, opt){
   if (v === 'summary') loadSummary();
   if (v === 'input') prepareInput();
   if (v === 'tax') ensureAccounts().then(openTax);
+  if (v === 'nws') openNws();
 }
 document.getElementById('tabbar').addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-tab]');
@@ -504,6 +574,7 @@ async function loadSummary(){
     set('investEnd', yen(x.investEnd));
     document.getElementById('sumAlerts').innerHTML = (x.alerts || []).map(a =>
       '<div class="line" style="background:#fff8e1;border-color:#ffe082;margin-top:10px;font-size:13px;">⚠️ ' + esc(a.text) + '</div>').join('');
+    renderBudget(x); renderNwsHome(x);
     document.getElementById('breakdown').innerHTML = breakdownHtml(x);
     if ((x.preStartLoans || []).length) document.getElementById('breakdown').insertAdjacentHTML('beforeend',
       '<div class="note" style="margin-top:10px;">集計開始月（' + esc(x.startYm) + '）より前に借りたローンの返済は、毎月の固定費と同じく自由費から引いています：' +
@@ -541,13 +612,13 @@ const DETAIL = {
     f: x => `自由費・今月分 <b>${yen(x.freeBase)}</b> ＋ 前月からの繰越 <b>${yen(x.carryFree)}</b> − 今月の変動費 <b>${yen(x.variable)}</b> ＝ <b>${yen(x.freeLeftMonth)}</b>`,
     w: '自由費・今月分の内訳は、ホーム下の「自由費の内訳」で1行ずつ見られます。月末の残りは来月に繰り越します。' },
   baseIncome: { t: '今月の予算の元（先月の総収入）', v: x => x.baseIncome, h: 'baseIncome', hl: '予算の元', cat: 'income', ym: x => x.baseSource.indexOf('先月') === 0 ? x.baseYm : '',
-    f: x => `${esc(x.baseSource)}：給与 ＋ 副業 ＋ その他の収入` + (x.unwithheldTax ? ` <b>${yen(x.baseIncomeGross)}</b> − 源泉徴収なし給与の税金（見込み） <b>${yen(x.unwithheldTax)}</b>` : '') + ` ＝ <b>${yen(x.baseIncome)}</b>（賞与は除く）`,
-    w: '今月の予算は、先月に実際に入った収入から組みます。まだ入っていない今月の給料をあてにしないためです。集計開始月だけは「設定」の「開始前月の収入」を使います。' },
+    f: x => `${esc(x.baseSource)}：給与 ＋ 副業 ＋ その他の収入` + (x.baseDeduct || x.unwithheldTax ? ` <b>${yen(x.baseIncomeGross)}</b>` : '') + (x.baseDeduct ? ` − 給与からの天引き <b>${yen(x.baseDeduct)}</b>` : '') + (x.unwithheldTax ? ` − 源泉徴収なし給与の税金（見込み） <b>${yen(x.unwithheldTax)}</b>` : '') + ` ＝ <b>${yen(x.baseIncome)}</b>（賞与は除く）`,
+    w: '今月の予算は、先月に実際に入った収入から組みます。まだ入っていない今月の給料をあてにしないためです。給与の天引きは引いて、手取りで数えます。前の月に収入の伝票が無いときだけ「設定」の「開始前月の収入」を使います。' },
   monthIncome: { t: '今月の収入（来月の予算）', v: x => x.monthlyIncome, h: 'income', hl: '収入', cat: 'income', ym: x => x.yyyymm,
     f: x => `給与 <b>${yen(x.salaryIncome)}</b> ＋ 副業 <b>${yen(x.sideIncome)}</b> ＋ その他 <b>${yen(x.otherIncome)}</b> ＝ <b>${yen(x.monthlyIncome)}</b>`,
     w: '今月入った収入は、今月の予算には使わず、来月の予算の元になります。賞与は別枠で全額貯蓄します。' },
   saving: { t: '貯蓄額（賞与込）', v: x => x.savingTotal, h: 'saving', hl: '貯蓄（給与分）', cat: 'bonus', ym: x => x.yyyymm,
-    f: x => `予算の元 <b>${yen(x.baseIncome)}</b> × 貯蓄率 ＝ <b>${yen(x.savingFromSalary)}</b>　＋ 今月の賞与 <b>${yen(x.bonusTotal)}</b> ＝ <b>${yen(x.savingTotal)}</b>`,
+    f: x => `予算の元 <b>${yen(x.baseIncome)}</b> × 貯蓄率 ＝ <b>${yen(x.savingFromSalary)}</b>　＋ 今月の賞与（天引き後） <b>${yen(x.bonusTotal)}</b> ＝ <b>${yen(x.savingTotal)}</b>`,
     w: '貯蓄額のうち投資率の分（' + '投資予定額の「基本」' + '）を投資に回す予定にします。賞与は入った月に全額を貯蓄に入れます。' },
   fixed: { t: '毎月固定費（予定）', v: x => x.fixedMonthlyPlan, h: 'fixedPlan', hl: '固定費の予定', cat: 'fixedMonthly', ym: x => (x.history || []).length > 1 ? x.baseYm : x.yyyymm,
     f: x => `先月の毎月固定費の実績 ＝ <b>${yen(x.fixedMonthlyPlan)}</b>` + (x.preLoanRepay ? `　＋ 開始前のローンの返済 <b>${yen(x.preLoanRepay)}</b>（これも自由費から引きます）` : ''),
@@ -677,7 +748,9 @@ document.getElementById('sheet').addEventListener('click', async e => {
           初期残高: document.getElementById('afInit').value === '' ? 0 : Number(document.getElementById('afInit').value),
           家計反映対象: document.getElementById('afHH').checked, 投資フラグ: document.getElementById('afInv').checked,
           グループ: document.getElementById('afGrpBox').classList.contains('hidden') ? '' : document.getElementById('afGrp').value,
-          税区分: document.getElementById('afTaxBox').classList.contains('hidden') ? '' : document.getElementById('afTax').value }]);
+          税区分: document.getElementById('afTaxBox').classList.contains('hidden') ? '' : document.getElementById('afTax').value,
+          税の項目: document.getElementById('afTiBox').classList.contains('hidden') ? '' : document.getElementById('afTi').value,
+          NWS: document.getElementById('afNwsBox').classList.contains('hidden') ? '' : document.getElementById('afNws').value }]);
       }
       accountsCache = null; LS.masters = null;
       closeSheet();
@@ -695,6 +768,8 @@ document.getElementById('sheet').addEventListener('change', e => {
   document.getElementById('afHH').checked = pl;       // 収益・費用は家計に数える／口座は数えない が基本
   if (!pl) document.getElementById('afType').value = '';
   document.getElementById('afTaxBox').classList.toggle('hidden', c !== '収益');
+  document.getElementById('afTiBox').classList.toggle('hidden', !(c === '費用' || c === '資産'));
+  document.getElementById('afNwsBox').classList.toggle('hidden', c !== '費用');
   const bsCls = c === '資産' || c === '負債';
   document.getElementById('afGrpBox').classList.toggle('hidden', !bsCls);
   if (bsCls) document.getElementById('afGrp').innerHTML = grpOpts(c, '');
@@ -713,6 +788,8 @@ function openAccountForm(a){
     <label>科目名</label><input id="afName" value="${esc(v.勘定科目名)}" placeholder="例：〇〇銀行、現金、食費">
     <label>分類</label><select id="afCls">${opt([['資産', '資産（銀行・現金・電子マネー・投資・立替金）'], ['負債', '負債（クレジットカード・借入）'], ['収益', '収益（給与・副業などの収入）'], ['費用', '費用（食費・家賃などの支出）'], ['純資産', '純資産（残高調整など）']], v.分類)}</select>
     <div id="afTaxBox" class="${v.分類 === '収益' ? '' : 'hidden'}"><label>税区分（税金の計算での扱い）</label><select id="afTax">${opt([['', '種別から自動（給与収入→源泉徴収あり／副業収入→事業・雑所得）'], ['給与（源泉徴収あり）', '給与（源泉徴収あり）…本業など'], ['給与（源泉徴収なし）', '給与（源泉徴収なし）…手取りは税金を引いて数える'], ['事業・雑所得', '事業・雑所得…副業の売上（経費を引く）'], ['非課税・対象外', '非課税・対象外…ポイント・利息など']], v.税区分の指定 !== undefined ? v.税区分の指定 : (v.税区分 || ''))}</select></div>
+    <div id="afTiBox" class="${v.分類 === '費用' || v.分類 === '資産' ? '' : 'hidden'}"><label>税の項目（この科目の伝票の合計を、税金の計算に自動で使う）</label><select id="afTi">${opt([['', 'なし'], ['所得税（源泉徴収）', '所得税（源泉徴収）'], ['住民税', '住民税'], ['社会保険料', '社会保険料（健保・年金・雇用・介護）'], ['生命保険料（一般）', '生命保険料（一般）'], ['介護医療保険料', '介護医療保険料（医療保険など）'], ['個人年金保険料', '個人年金保険料'], ['地震保険料', '地震保険料'], ['iDeCo・小規模企業共済', 'iDeCo・小規模企業共済（資産の口座）'], ['ふるさと納税（寄附）', 'ふるさと納税（寄附）']], v.税の項目 || '')}</select></div>
+    <div id="afNwsBox" class="${v.分類 === '費用' ? '' : 'hidden'}"><label>Needs / Wants（50/30/20 の振り返りでの区分）</label><select id="afNws">${opt([['', '自動（固定費・年払い→Needs、変動費→Wants、税金→対象外）'], ['Needs', 'Needs（生活に必要）'], ['Wants', 'Wants（ほしいもの）'], ['対象外', '対象外（税金・寄附など。割合に入れない）']], v.NWS || '')}</select></div>
     <div id="afTypeBox" class="${pl ? '' : 'hidden'}"><label>種別（今月の残りのどこに数えるか）</label><select id="afType">${opt([['', '（なし＝費用なら変動費）'], ['給与収入', '給与収入'], ['副業収入', '副業収入'], ['その他収入', 'その他収入'], ['毎月固定費', '毎月固定費'], ['年払い固定費', '年払い固定費'], ['ローン', 'ローン（購入）'], ['変動費', '変動費']], v.種別)}</select></div>
     <div id="afGrpBox" class="${v.分類 === '資産' || v.分類 === '負債' ? '' : 'hidden'}"><label>グループ（口座画面での並び）</label><select id="afGrp">${grpOpts(v.分類, v.グループ)}</select></div>
     <label>事業区分</label><select id="afSeg">${opt([['家計', '家計'], ['副業', '副業'], ['共通', '共通']], v.事業区分 || '家計')}</select>
@@ -754,10 +831,12 @@ function breakdownHtml(x){
       '今月、投資フラグの付いた科目（NISAなど）に入れた額です。') +
     bdRow('＝', '残投資予定額（月末）', x.investEnd,
       'まだ投資していない予定額です。プラスなら投資できる余地、マイナスなら予定より多く投資しています。', true);
+  const ded = x.baseDeduct || 0, uw = x.unwithheldTax || 0, adj = !!(ded || uw);
   const free =
-    (x.unwithheldTax ? bdRow('', '先月の総収入（額面）', x.baseIncomeGross, `${esc(x.baseSource)}の合計です。給与・副業・その他の収入で、賞与は全額貯蓄に回すので含めません。`) +
-      bdRow('−', '源泉徴収なし給与の税金（見込み）', x.unwithheldTax, `源泉徴収されていない給与 ${yen(x.unwithheldSalary)} には、あとで所得税・住民税がかかります。メニューの「副業の税金」で出した割合（${Math.round(x.unwithheldRate * 1000) / 10}%）を引いて、実際の手取りで数えます。`) : '') +
-    bdRow(x.unwithheldTax ? '＝' : '', '予算の元（先月の総収入' + (x.unwithheldTax ? '・手取り' : '') + '）', x.baseIncome, `${esc(x.baseSource)}です。給与・副業・その他の収入の合計で、賞与は全額貯蓄に回すので含めません。今月入った収入は来月の予算になります。`) +
+    (adj ? bdRow('', '先月の総収入（額面）', x.baseIncomeGross, `${esc(x.baseSource)}の合計です。給与・副業・その他の収入で、賞与は全額貯蓄に回すので含めません。`) +
+      (ded ? bdRow('−', '給与からの天引き（所得税・住民税・社会保険料など）', ded, '給与明細の形で入れた天引きです。口座に振り込まれていないお金なので、予算の元から引いて手取りで数えます（税金の計算では源泉徴収税額・社会保険料として使います）。') : '') +
+      (uw ? bdRow('−', '源泉徴収なし給与の税金（見込み）', uw, `源泉徴収されていない給与 ${yen(x.unwithheldSalary)} には、あとで所得税・住民税がかかります。メニューの「税金の見込み」で出した割合（${Math.round(x.unwithheldRate * 1000) / 10}%）を引いて、実際の手取りで数えます。`) : '') : '') +
+    bdRow(adj ? '＝' : '', '予算の元（先月の総収入' + (adj ? '・手取り' : '') + '）', x.baseIncome, `${esc(x.baseSource)}です。給与・副業・その他の収入の合計で、賞与は全額貯蓄に回すので含めません。今月入った収入は来月の予算になります。`) +
     bdRow('−', '貯蓄額（給与分）', x.savingFromSalary, '予算の元 × 貯蓄率。先に取り分けて、使えないお金にします。') +
     bdRow('−', '毎月固定費（予定）', x.fixedMonthlyPlan, '前月の毎月固定費の実績です。月末に払うものがまだ現れていなくても、先に差し引いておきます（初月は今月の実績）。') +
     bdRow(x.fixedCarryDiff < 0 ? '＋' : '−', '先月の固定費の差の精算', Math.abs(x.fixedCarryDiff), '先月の固定費が予定より多かった分は今月の自由費から引き、少なかった分は足します（先月の 実績−予定 ＝ ' + signYen(x.fixedCarryDiff) + '）。') +
@@ -896,17 +975,8 @@ document.getElementById('lsBody').addEventListener('click', e => {
   openAccountForm(Object.assign({}, a, { 家計反映対象: tb(a.家計反映対象), 投資フラグ: tb(a.投資フラグ) }));
 });
 
-// ---- 副業の税金（v1.17） ----
-const TX_FIELDS = [
-  ['本業給与収入', '本業の給与（額面・年間）', '源泉徴収票の「支払金額」の見込み'],
-  ['本業源泉徴収税額', '本業で源泉徴収される所得税（年間）', '源泉徴収票の「源泉徴収税額」の見込み'],
-  ['副業給与年間見込み', '源泉徴収なしの給与（年間見込み）', '空なら、今年の伝票の合計を1年分にのばして使います'],
-  ['社会保険料', '社会保険料（健康保険・年金など。本業の天引き分も）', '', true],
-  ['生命保険料_一般', '生命保険料（一般・新契約）', '', true],
-  ['生命保険料_介護医療', '介護医療保険料（医療保険など）', '', true],
-  ['生命保険料_個人年金', '個人年金保険料', '', true],
-  ['地震保険料', '地震保険料', '', true],
-  ['iDeCo等', 'iDeCo・小規模企業共済の掛金', '', true],
+// ---- 税金（副業・ふるさと納税・控除）v1.18 ----
+const TX_MANUAL = [
   ['一般扶養人数', '扶養している人の数（16歳以上・一般）', '人'],
   ['特定扶養人数', 'うち19〜22歳（特定扶養）の人数', '人（上の数に含めない）'],
   ['青色申告特別控除', '青色申告特別控除（副業の売上がある場合）', '0・100000・550000・650000 のどれか'],
@@ -924,15 +994,25 @@ async function loadTax(year){
   try { TX.year = year; TX.est = await rpc('getTaxEstimate', [year]); renderTax(); }
   catch(e) { msg.textContent = e.message; }
 }
+function pct1(v){ return v === null || v === undefined || !isFinite(v) ? '－' : (Math.round(v * 1000) / 10) + '%'; }
 function renderTax(){
   const e = TX.est, a = e.all, st = e.settings || {};
   document.getElementById('txYearLabel').textContent = e.year;
   document.getElementById('txRules').textContent = e.rules;
   document.getElementById('txSide').textContent = yen(e.side.total);
-  document.getElementById('txRate').textContent = (Math.round(e.sideSalaryRate * 1000) / 10) + '%';
+  document.getElementById('txRate').textContent = pct1(e.sideSalaryRate);
   document.getElementById('txPay').innerHTML = e.payIncomeTax >= 0 ? yen(e.payIncomeTax) : '<span class="plus">還付 ' + yen(-e.payIncomeTax) + '</span>';
   document.getElementById('txRateNote').textContent = '源泉徴収なしの給与 年' + yen(e.fromEntries.sideSalaryAnnual) + '（今年の伝票 ' + yen(e.fromEntries.sideSalaryYtd) + '）にかかる税金は ' + yen(e.sideSalaryTax) +
     '。この割合を引いた額（手取り）を、翌月の予算の元にしています。';
+  const f = e.furusato;
+  document.getElementById('txFuru').innerHTML = `<div class="sec" style="margin-top:16px;">ふるさと納税（${e.year}年の寄附）</div>
+    <div class="grid2">
+      <div class="stat"><div class="k">寄附の上限の目安（自己負担2,000円）</div><div class="v" id="txFuruLimit">${yen(f.limit)}</div></div>
+      <div class="stat"><div class="k">${f.over ? '上限を超えた額' : 'あと寄附できる額'}</div><div class="v ${f.over ? 'minus' : ''}" id="txFuruLeft">${f.over ? yen(f.donated - f.limit) : yen(f.remaining)}</div></div>
+    </div>
+    <div class="note" style="line-height:1.7;">寄附した額 ${yen(f.donated)}（伝票＋手入力）。上限 ＝ 住民税の所得割 ${yen(f.residentIncome)} × 20% ÷（90% − 所得税率 ${Math.round(f.marginalRate * 100)}% × 1.021）＋ 2,000円。` +
+    (f.filing ? '副業の所得や源泉徴収なしの給与があって確定申告をするので、ワンストップ特例は使えません。寄附は確定申告で申告してください。' : '') +
+    `年末までの見込みを含む概算です。住宅ローン控除・医療費控除などがあると上限は変わるので、12月の寄附は少し余裕をもってください。</div>`;
   document.getElementById('txAlerts').innerHTML = (e.alerts || []).map(t => '<div class="line" style="background:#fff8e1;border-color:#ffe082;margin-top:10px;font-size:13px;">⚠️ ' + esc(t) + '</div>').join('');
   const row = (k, v, strong) => `<div class="ent"${strong ? ' style="font-weight:700;"' : ''}><span>${k}</span><b class="amt">${v}</b></div>`;
   document.getElementById('txCalc').innerHTML =
@@ -943,37 +1023,268 @@ function renderTax(){
     '<div class="sub" style="margin-top:10px;">所得税</div>' +
     row('社会保険料・iDeCo等・その他', yen(e.inputs.social + e.inputs.ideco + e.inputs.otherDed)) + row('生命保険料控除', yen(a.lifeIT)) + row('地震保険料控除', yen(a.quakeIT)) +
     row('扶養控除', yen(a.depIT)) + row('基礎控除', yen(a.basicIT)) + row('＝ 課税所得（千円未満切り捨て）', yen(a.taxableIT)) +
-    row('所得税（復興特別所得税込み）', yen(a.incomeTax), true) + row('− 本業で源泉徴収される額', yen(e.withheld)) +
+    row('所得税（復興特別所得税込み）', yen(a.incomeTax), true) + row('− 源泉徴収された（される）額', yen(e.withheld)) +
     row('＝ 確定申告で納める見込み', e.payIncomeTax >= 0 ? yen(e.payIncomeTax) : '還付 ' + yen(-e.payIncomeTax), true) +
     '<div class="sub" style="margin-top:10px;">住民税（翌年の6月から払う分）</div>' +
     row('生命保険料控除・地震保険料控除・扶養控除', yen(a.lifeRT + a.quakeRT + a.depRT)) + row('基礎控除', yen(a.basicRT)) + row('＝ 課税所得', yen(a.taxableRT)) +
     row('所得割（10% − 調整控除 ' + yen(a.residentAdj) + '）＋ 均等割', yen(a.residentIncome) + ' ＋ ' + yen(a.residentFlat)) + row('住民税', yen(a.resident), true) +
     '<div class="sub" style="margin-top:10px;">副業で増える分（副業が無い場合との差）</div>' +
     row('所得税', yen(e.side.incomeTax)) + row('住民税', yen(e.side.resident)) + row('合計', yen(e.side.total), true);
-  const accs = (accountsCache || []).filter(x => x.分類 === '費用');
-  document.getElementById('txForm').innerHTML = TX_FIELDS.map(([k, label, hint, linkable]) => {
-    const linked = linkable && st[k + '_科目'];
-    return `<label>${esc(label)}</label><div class="row">` +
-      `<input type="number" inputmode="numeric" class="tx-in" data-k="${k}" value="${linked ? (e.linked[k] || 0) : (st[k] === undefined ? '' : st[k])}" ${linked ? 'disabled' : ''} placeholder="${esc(hint && !/^人/.test(hint) ? '' : hint)}" style="flex:1;">` +
-      (linkable ? `<select class="tx-acc" data-k="${k}" style="flex:1;"><option value="">金額を入れる</option>${accs.map(x => `<option value="${esc(x.勘定科目ID)}"${x.勘定科目ID === st[k + '_科目'] ? ' selected' : ''}>科目から集計：${esc(x.勘定科目名)}</option>`).join('')}</select>` : '') +
-      `</div>${hint && !/^人/.test(hint) ? '<div class="note" style="margin-top:2px;">' + esc(hint) + '</div>' : ''}`;
-  }).join('');
+  const proj = e.projectAvailable ? `<label class="opt" style="margin-top:10px;"><input type="checkbox" class="chk" id="txProj"${e.projecting ? ' checked' : ''}>年末までの見込みを足す（給与・源泉徴収税額・社会保険料を、ふだんの月の平均で）</label>` : '';
+  document.getElementById('txForm').innerHTML = proj + e.items.map(i => `<div class="tx-item">
+      <div class="row" style="justify-content:space-between;"><b style="font-size:13px;">${esc(i.label)}</b><b class="amt" data-total="${esc(i.key)}">${yen(i.total)}</b></div>
+      <div class="eq">伝票 ${yen(i.entries)}${i.projectable && e.projecting ? ' ＋ 年末までの見込み ' + yen(i.projected) + (i.projectMonths ? '（ふだんの月 ' + yen(i.monthlyAvg) + ' × ' + i.projectMonths + 'か月）' : '') : ''} ＋ 手入力 ${yen(i.manual)}</div>
+      <div class="row" style="margin-top:4px;"><span class="sub" style="flex:1;">伝票に載らない分（手入力）</span><input type="number" inputmode="numeric" class="tx-in" data-k="${esc(i.key)}" value="${i.manual || ''}" placeholder="0"></div>
+      <div class="note" style="margin-top:2px;">集める伝票：${esc(i.source)}</div></div>`).join('') +
+    '<div class="sub" style="margin-top:14px;">伝票からは分からないもの</div>' +
+    TX_MANUAL.map(([k, label, hint]) => `<label>${esc(label)}</label><input type="number" inputmode="numeric" class="tx-in" data-k="${k}" value="${st[k] === undefined ? '' : st[k]}" placeholder="${esc(/^人/.test(hint) ? hint : '')}">` +
+      (/^人/.test(hint) ? '' : `<div class="note" style="margin-top:2px;">${esc(hint)}</div>`)).join('');
 }
 document.getElementById('txYear').addEventListener('change', e => loadTax(Number(e.target.value)));
 document.getElementById('txBack').onclick = () => showView('settings');
-document.getElementById('txForm').addEventListener('change', e => {
-  if (!e.target.classList.contains('tx-acc')) return;
-  const inp = document.querySelector('.tx-in[data-k="' + e.target.dataset.k + '"]');
-  inp.disabled = !!e.target.value; if (e.target.value) inp.value = '';
-});
 document.getElementById('txSave').onclick = async () => {
   const msg = document.getElementById('txMsg'); msg.textContent = '';
   const o = {};
-  document.querySelectorAll('.tx-in').forEach(i => { if (!i.disabled && i.value !== '') o[i.dataset.k] = Number(i.value); });
-  document.querySelectorAll('.tx-acc').forEach(s => { if (s.value) o[s.dataset.k + '_科目'] = s.value; });
-  try { TX.est = await rpc('saveTaxSettings', [TX.year, o]); renderTax(); msg.className = 'ok'; msg.textContent = '保存して計算し直しました'; setTimeout(() => { msg.className = 'err'; }, 0); }
+  document.querySelectorAll('.tx-in').forEach(i => { if (i.value !== '') o[i.dataset.k] = Number(i.value); });
+  const pj = document.getElementById('txProj'); if (pj) o.見込みを足す = pj.checked ? 1 : 0;
+  try { TX.est = await rpc('saveTaxSettings', [TX.year, o]); renderTax(); msg.className = 'ok'; msg.textContent = '保存して計算し直しました'; }
   catch(err) { msg.className = 'err'; msg.textContent = err.message; }
 };
+
+// ---- 円グラフ（v1.18）：SVG の輪。parts:[{v, color, label}] ----
+function donutSvg(parts, size, thick){
+  const r = (size - thick) / 2, c = 2 * Math.PI * r, mid = size / 2;
+  const live = parts.filter(p => p.v > 0), tot = live.reduce((s, p) => s + p.v, 0);
+  const gap = live.length > 1 ? 2 : 0;
+  let off = 0;
+  const segs = live.map(p => {
+    const len = p.v / tot * c, d = Math.max(0.01, len - gap);
+    const s = `<circle cx="${mid}" cy="${mid}" r="${r}" fill="none" style="stroke:${p.color}" stroke-width="${thick}" stroke-dasharray="${d} ${c - d}" stroke-dashoffset="${-off}"><title>${esc(p.label)}</title></circle>`;
+    off += len; return s;
+  }).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)" aria-hidden="true">` +
+    `<circle cx="${mid}" cy="${mid}" r="${r}" fill="none" style="stroke:var(--c-track)" stroke-width="${thick}"></circle>${segs}</svg>`;
+}
+function pct0(v){ return v === null || v === undefined || !isFinite(v) ? '－' : Math.round(v * 100) + '%'; }
+/** ホーム：今月の予算（自由費・繰越込）に対して、いくら使ったか */
+function renderBudget(x){
+  const el = document.getElementById('budgetBox');
+  const budget = x.freeBase + x.carryFree, used = x.variable, left = x.freeLeftMonth;
+  const now = new Date(), cur = localToday().slice(0, 7);
+  const elapsed = x.yyyymm === cur ? now.getDate() / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() : null;
+  if (!(budget > 0)) {
+    el.innerHTML = `<div class="donut">${donutSvg([{ v: 1, color: 'var(--c-over)', label: '予算なし' }], 116, 14)}<div class="ctr"><span>今月の予算</span><b class="minus">なし</b></div></div>
+      <div class="donut-side">今月使える予算（自由費・繰越込）が <b class="minus">${yen(budget)}</b> です。使った額 ${yen(used)}。</div>`;
+    return;
+  }
+  const p = used / budget, over = p > 1;
+  const parts = over ? [{ v: 1, color: 'var(--c-over)', label: '予算を超えています' }]
+    : [{ v: used, color: 'var(--c-needs)', label: '使った ' + pct0(p) }, { v: budget - used, color: 'var(--c-track)', label: '残り ' + pct0(1 - p) }];
+  const pace = elapsed === null ? '' : over ? '<span class="minus">予算を超えています</span>' : p > elapsed + 0.1 ? '<span class="minus">月の経過よりペースが早めです</span>' : 'ペースどおりです';
+  el.innerHTML = `<div class="donut">${donutSvg(parts, 116, 14)}<div class="ctr"><span>${over ? '超過' : '残り'}</span><b id="budgetPct" class="${over ? 'minus' : ''}">${over ? pct0(p - 1) : pct0(1 - p)}</b></div></div>
+    <div class="donut-side">
+      <div class="kv"><span class="sub">今月の予算（自由費・繰越込）</span><b>${yen(budget)}</b></div>
+      <div class="kv"><span><span class="sw" style="background:var(--c-needs)"></span>使った</span><b>${yen(used)}（${pct0(p)}）</b></div>
+      <div class="kv"><span><span class="sw" style="background:var(--c-track)"></span>残り</span><b class="${left < 0 ? 'minus' : ''}">${yen(left)}</b></div>
+      ${elapsed === null ? '' : `<div class="kv"><span class="sub">月の経過</span><b>${pct0(elapsed)}</b></div><div class="sub" style="margin-top:2px;">${pace}</div>`}
+    </div>`;
+}
+const NWS_LABEL = { needs: 'Needs', wants: 'Wants', savings: 'Savings' };
+const NWS_COLOR = { needs: 'var(--c-needs)', wants: 'var(--c-wants)', savings: 'var(--c-savings)' };
+function nwsParts(n){
+  return ['needs', 'wants', 'savings'].map(k => ({ v: Math.max(0, n[k]), color: NWS_COLOR[k], label: NWS_LABEL[k] + ' ' + pct1(n.pct[k]) }));
+}
+function renderNwsHome(x){
+  const el = document.getElementById('nwsHomeBody'), n = x.nws;
+  if (!n || !(n.income > 0)) { el.innerHTML = '手取り（予算の元）が0円のため、割合を出せません。'; return; }
+  el.innerHTML = `<div class="donut-row" style="margin-top:0;"><div class="donut">${donutSvg(nwsParts(n), 96, 12)}<div class="ctr"><span>Savings</span><b style="font-size:16px;" class="${n.savings < 0 ? 'minus' : ''}">${pct0(n.pct.savings)}</b></div></div>
+    <div class="donut-side">${['needs', 'wants', 'savings'].map(k => `<div class="kv"><span><span class="sw" style="background:${NWS_COLOR[k]}"></span>${NWS_LABEL[k]}</span><b>${pct1(n.pct[k])} <span class="sub">／理想 ${Math.round(n.ideal[k] * 100)}%</span></b></div>`).join('')}</div></div>`;
+}
+document.getElementById('nwsOpen').onclick = () => showView('nws');
+
+// ---- Needs / Wants / Savings の振り返り（v1.18） ----
+const NW = { ym: '', x: null };
+function shiftYm(ym, n){ const p = ym.split('-').map(Number); const d = new Date(p[0], p[1] - 1 + n, 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+async function openNws(){ NW.ym = (LAST_SUM && LAST_SUM.yyyymm) || localToday().slice(0, 7); await loadNws(); }
+async function loadNws(){
+  const err = document.getElementById('nwErr'); err.textContent = '';
+  document.getElementById('nwYm').textContent = NW.ym.replace('-', '年') + '月';
+  try { NW.x = await rpc('getMonthSummary', [NW.ym]); renderNws(NW.x); }
+  catch(e) { err.textContent = e.message; }
+}
+function ptStr(v){ const x = Math.round(v * 1000) / 10; return (x > 0 ? '+' : '') + x + 'pt'; }
+function renderNws(x){
+  const n = x.nws, body = document.getElementById('nwBody');
+  document.getElementById('nwPrev').disabled = !!x.startYm && NW.ym <= x.startYm;
+  document.getElementById('nwNext').disabled = NW.ym >= localToday().slice(0, 7);
+  if (!n || !(n.income > 0)) {
+    body.innerHTML = '<p class="sub">この月は手取り（予算の元）が0円のため、割合を出せません。</p>';
+    document.getElementById('nwItems').textContent = '－'; renderNwTrend(x); return;
+  }
+  const keys = ['needs', 'wants', 'savings'];
+  const g = k => n.pct[k] - n.ideal[k];
+  const msgs = [];
+  if (g('needs') > 0.02) msgs.push(`Needs が理想（50%）より <b>${ptStr(g('needs'))}</b> 多く、金額では <b>${yen(n.gap.needs)}</b> です。家賃・通信費・保険など毎月の固定費は、一度見直すと毎月効いてきます。`);
+  if (g('wants') > 0.02) {
+    const top = n.items.filter(i => i.cls === 'Wants').slice(0, 2).map(i => esc(i.name) + ' ' + yen(i.amount)).join('、');
+    msgs.push(`Wants が理想（30%）より <b>${ptStr(g('wants'))}</b> 多く、金額では <b>${yen(n.gap.wants)}</b> です。` + (top ? `多いのは ${top}。` : ''));
+  }
+  if (g('savings') < -0.02) msgs.push(n.savings < 0 ? `手取りより <b>${yen(-n.savings)}</b> 多く使っています（Savings がマイナス）。` : `Savings が理想（20%）に <b>${ptStr(-g('savings')).replace('+', '')}</b> 足りません（あと <b>${yen(-n.gap.savings)}</b>）。`);
+  if (!msgs.length) msgs.push(keys.every(k => Math.abs(g(k)) <= 0.02) ? 'ほぼ理想の配分（50 / 30 / 20）です。この配分を続けましょう。'
+    : 'Needs と Wants は理想以内で、Savings は理想より <b>' + ptStr(g('savings')) + '</b> 多くなっています。良い配分です。');
+  if (NW.ym === localToday().slice(0, 7)) msgs.push('<span class="sub">月の途中なので、まだ使っていない分も Savings に入っています。月末に近いほど実際の配分に近づきます。</span>');
+  const ideal = keys.map(k => ({ v: n.ideal[k], color: NWS_COLOR[k], label: NWS_LABEL[k] + ' ' + Math.round(n.ideal[k] * 100) + '%' }));
+  body.innerHTML = `<div class="nw-pair">
+      <div><div class="donut">${donutSvg(nwsParts(n), 128, 16)}<div class="ctr"><span>Savings</span><b class="${n.savings < 0 ? 'minus' : ''}" id="nwSavPct">${pct0(n.pct.savings)}</b></div></div><div class="cap">実際</div></div>
+      <div><div class="donut">${donutSvg(ideal, 128, 16)}<div class="ctr"><span>理想</span><b style="font-size:15px;">50/30/20</b></div></div><div class="cap">理想</div></div>
+    </div>
+    <table class="nw"><thead><tr><th>区分</th><th>金額</th><th>割合</th><th>理想</th><th>差</th></tr></thead><tbody>
+      ${keys.map(k => `<tr><td><span class="sw" style="background:${NWS_COLOR[k]}"></span>${NWS_LABEL[k]}</td><td>${yen(n[k])}</td><td><b>${pct1(n.pct[k])}</b></td><td>${Math.round(n.ideal[k] * 100)}%</td><td>${ptStr(g(k))}</td></tr>`).join('')}
+      <tr><td>手取り</td><td><b>${yen(n.income)}</b></td><td>100%</td><td></td><td></td></tr>
+    </tbody></table>
+    <div class="note" style="line-height:1.7;">手取り ＝ 予算の元 ${yen(n.baseIncome)}${n.excluded ? ' − 対象外（税金・寄附など）' + yen(n.excluded) : ''}。Needs＝生活に必要な支出（毎月固定費・年払いの積立・ローンの返済など）、Wants＝ほしいもの、Savings＝手取り − Needs − Wants（貯蓄・投資・まだ使っていないお金）。</div>
+    <div class="refl" id="nwRefl">${msgs.map(m => '<div>' + m + '</div>').join('')}</div>`;
+  const grp = c => n.items.filter(i => i.cls === c);
+  document.getElementById('nwItems').innerHTML = ['Needs', 'Wants', '対象外'].map(c => {
+    const list = grp(c); if (!list.length) return '';
+    return `<div class="grp"><span>${c === 'Needs' ? '<span class="sw" style="background:var(--c-needs)"></span>Needs' : c === 'Wants' ? '<span class="sw" style="background:var(--c-wants)"></span>Wants' : '対象外（割合に入れない）'}</span><span>${yen(list.reduce((s, i) => s + i.amount, 0))}</span></div>` +
+      list.map(i => `<div class="ent"><span>${esc(i.name)}<br><span class="sub">${esc(i.kind)}</span></span><b class="amt">${yen(i.amount)}${c === '対象外' ? '' : ' <span class="sub">' + pct1(i.amount / n.income) + '</span>'}</b></div>`).join('');
+  }).join('') || '支出はまだありません';
+  renderNwTrend(x);
+}
+function renderNwTrend(x){
+  const h = (x.history || []).slice().reverse().slice(0, 12).filter(r => r.nws);
+  const p = (r, k) => r.nws.income > 0 ? pct0(r.nws[k] / r.nws.income) : '－';
+  document.getElementById('nwTrend').innerHTML = h.length ? `<div class="hist-wrap"><table class="hist"><thead><tr><th>月</th><th>手取り</th><th>Needs</th><th>Wants</th><th>Savings</th></tr></thead><tbody>
+    ${h.map(r => `<tr><td>${esc(r.yyyymm)}</td><td>${yen(r.nws.income)}</td><td>${p(r, 'needs')}</td><td>${p(r, 'wants')}</td><td class="${r.nws.savings < 0 ? 'minus' : ''}">${p(r, 'savings')}</td></tr>`).join('')}
+    </tbody></table></div><div class="note">理想は Needs 50% / Wants 30% / Savings 20% です。</div>` : '－';
+}
+document.getElementById('nwPrev').onclick = () => { NW.ym = shiftYm(NW.ym, -1); loadNws(); };
+document.getElementById('nwNext').onclick = () => { NW.ym = shiftYm(NW.ym, 1); loadNws(); };
+document.getElementById('nwBack').onclick = () => showView('summary');
+
+// ---- 給与明細から入力（v1.18） ----
+const SAL = { on: false, ids: null };
+function taxClassOf(a){
+  const t = String(a.税区分 || ''); if (t) return t;
+  return a.種別 === '給与収入' ? '給与（源泉徴収あり）' : a.種別 === '副業収入' ? '事業・雑所得' : '非課税・対象外';
+}
+function accById(){ const m = {}; (accountsCache || []).forEach(a => { m[a.勘定科目ID] = a; }); return m; }
+function hasWithheldSalary(){
+  const m = accById();
+  return readLines().some(l => l.side === '貸方' && m[l.accountId] && m[l.accountId].分類 === '収益' && taxClassOf(m[l.accountId]) === '給与（源泉徴収あり）');
+}
+function salFromLines(){
+  const m = accById(), p = {};
+  readLines().forEach(l => {
+    const a = m[l.accountId]; if (!a) return;
+    if (l.side === '貸方' && a.分類 === '収益') { p.acc = l.accountId; p.gross = (p.gross || 0) + l.amount; if (l.bonus) p.bonus = true; }
+    else if (l.side === '借方' && a.分類 === '資産' && !p.bank) p.bank = l.accountId;
+    else if (l.side === '借方' && a.分類 === '費用') {
+      const t = String(a.税の項目 || '');
+      if (t === '所得税（源泉徴収）') p.it = (p.it || 0) + l.amount;
+      else if (t === '住民税') p.rt = (p.rt || 0) + l.amount;
+      else if (t === '社会保険料') p.so = (p.so || 0) + l.amount;
+      else { p.ot = (p.ot || 0) + l.amount; p.otAcc = l.accountId; }
+    }
+  });
+  return p;
+}
+const optsOf = (list, sel) => list.map(a => `<option value="${esc(a.勘定科目ID)}"${a.勘定科目ID === sel ? ' selected' : ''}>${esc(a.勘定科目名)}</option>`).join('');
+async function salOn(p){
+  const err = document.getElementById('inErr');
+  try {
+    if (!SAL.ids) { SAL.ids = await rpc('prepareSalaryAccounts', []); accountsCache = null; }
+  } catch(e) { err.textContent = e.message; return; }
+  const accs = await ensureAccounts();
+  p = p || {};
+  const sal = accs.filter(a => a.分類 === '収益' && taxClassOf(a) === '給与（源泉徴収あり）');
+  const banks = accs.filter(a => a.分類 === '資産');
+  const firstBank = (banks.find(a => a.グループ === '銀行') || banks[0] || {}).勘定科目ID;
+  document.getElementById('slAcc').innerHTML = optsOf(sal.length ? sal : accs.filter(a => a.分類 === '収益'), p.acc || (sal[0] || {}).勘定科目ID);
+  document.getElementById('slBank').innerHTML = optsOf(banks, p.bank || firstBank);
+  const taxIds = Object.values(SAL.ids || {});
+  const others = accs.filter(a => a.分類 === '費用' && taxIds.indexOf(a.勘定科目ID) < 0);
+  document.getElementById('slOtAcc').innerHTML = optsOf(others, p.otAcc);
+  const sv = (id, v) => { document.getElementById(id).value = v === undefined || v === null ? '' : v; };
+  sv('slGross', p.gross); sv('slIt', p.it); sv('slRt', p.rt || ''); sv('slSo', p.so || ''); sv('slOt', p.ot || '');
+  document.getElementById('slBonus').checked = !!p.bonus;
+  SAL.on = true;
+  document.getElementById('inSal').classList.remove('hidden');
+  document.getElementById('inSalAsk').classList.add('hidden');
+  document.getElementById('inSalStart').classList.add('hidden');
+  salApply();
+}
+function salOff(){
+  SAL.on = false;
+  document.getElementById('inSal').classList.add('hidden');
+  document.getElementById('inSalStart').classList.remove('hidden');
+  checkBalance();
+}
+function setLinesSync(lines){
+  const wrap = document.getElementById('inLines'), accs = accountsCache || [];
+  wrap.innerHTML = '';
+  lines.forEach((l, i) => {
+    wrap.insertAdjacentHTML('beforeend', lineHtml(i));
+    const row = wrap.lastElementChild, sel = row.querySelector('.ln-account');
+    sel.innerHTML = accs.map(a => `<option value="${esc(a.勘定科目ID)}">${esc(a.勘定科目名)}</option>`).join('');
+    row.querySelector('.ln-side').value = l.side; sel.value = l.accountId;
+    row.querySelector('.ln-amount').value = l.amount || '';
+    row.querySelector('.ln-bonus').checked = !!l.bonus;
+    row.querySelectorAll('input,select').forEach(el => el.addEventListener('input', checkBalance));
+  });
+  checkBalance();
+}
+function salApply(){
+  const n = id => Math.max(0, Math.floor(Number(document.getElementById(id).value) || 0));
+  const g = n('slGross'), it = n('slIt'), rt = n('slRt'), so = n('slSo'), ot = n('slOt');
+  const net = g - it - rt - so - ot, bonus = document.getElementById('slBonus').checked;
+  const ids = SAL.ids || {};
+  document.getElementById('slNet').innerHTML = '振込額（手取り）＝ 額面 ' + yen(g) + ' − 天引き ' + yen(it + rt + so + ot) + ' ＝ <b class="' + (net < 0 ? 'minus' : '') + '">' + yen(net) + '</b>';
+  const lines = [{ side: '借方', accountId: document.getElementById('slBank').value, amount: Math.max(0, net) }];
+  if (it) lines.push({ side: '借方', accountId: ids['所得税（源泉徴収）'], amount: it });
+  if (rt) lines.push({ side: '借方', accountId: ids['住民税'], amount: rt });
+  if (so) lines.push({ side: '借方', accountId: ids['社会保険料'], amount: so });
+  if (ot) lines.push({ side: '借方', accountId: document.getElementById('slOtAcc').value, amount: ot });
+  lines.push({ side: '貸方', accountId: document.getElementById('slAcc').value, amount: g, bonus: bonus });
+  if (!document.getElementById('inMemo').value) document.getElementById('inMemo').value = bonus ? '賞与' : '給与';
+  setLinesSync(lines);
+}
+document.getElementById('inSal').addEventListener('input', salApply);
+document.getElementById('inSal').addEventListener('change', salApply);
+document.getElementById('inSalStart').onclick = () => salOn({});
+document.getElementById('inSalUse').onclick = () => salOn(salFromLines());
+document.getElementById('inSalOff').onclick = salOff;
+function salReset(){
+  SAL.on = false;
+  ['inSal', 'inSalAsk'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  document.getElementById('inSalStart').classList.remove('hidden');
+  document.getElementById('inNws').value = '';
+}
+/** 給与・Needs/Wants の入力チェック（checkBalance から呼ぶ）。戻り値：登録してよいか */
+function checkSalaryAndNws(el){
+  const need = hasWithheldSalary();
+  if (!SAL.on) document.getElementById('inSalAsk').classList.toggle('hidden', !need);
+  let ok = true;
+  if (SAL.on) {
+    ok = Number(document.getElementById('slGross').value) > 0 && document.getElementById('slIt').value !== '' && Number(document.getElementById('slIt').value) >= 0;
+    if (!ok) el.textContent += '　給与明細の額面と所得税を入れてください（所得税が無ければ0）';
+  } else if (need) { ok = false; el.textContent += '　給与の伝票は「給与明細の形で入れる」から、額面と所得税を入れてください'; }
+  // Needs / Wants：収入の伝票（天引き）以外で、費用の明細があるときだけ選べる
+  const m = accById(), lines = readLines();
+  const isIncome = lines.some(l => l.side === '貸方' && m[l.accountId] && m[l.accountId].分類 === '収益');
+  const exps = lines.filter(l => l.side === '借方' && m[l.accountId] && m[l.accountId].分類 === '費用');
+  const show = !isIncome && exps.length > 0;
+  document.getElementById('inNwsBox').classList.toggle('hidden', !show);
+  if (show) {
+    const dflt = a => { const t = String(a.税の項目 || ''); if (['所得税（源泉徴収）', '住民税', '社会保険料', 'ふるさと納税（寄附）'].indexOf(t) >= 0) return '対象外'; return (a.種別 || '変動費') === '変動費' ? 'Wants' : 'Needs'; };
+    const auto = Array.from(new Set(exps.map(l => { const a = m[l.accountId]; return esc(a.勘定科目名) + '→' + (['Needs', 'Wants', '対象外'].indexOf(a.NWS) >= 0 ? a.NWS : dflt(a)); }))).join('、');
+    document.getElementById('inNwsNote').innerHTML = document.getElementById('inNws').value ? 'この伝票だけ「' + esc(document.getElementById('inNws').value) + '」で数えます（科目の設定：' + auto + '）' : '自動：' + auto;
+  }
+  return ok;
+}
+document.getElementById('inNws').addEventListener('change', () => checkBalance());
+
 
 function esc(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function localToday(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
@@ -1063,15 +1374,17 @@ function checkBalance(){
   const el = document.getElementById('inCheck');
   el.textContent = `借方合計 ${yen(debit)} ／ 貸方合計 ${yen(credit)}` + (debit===credit && debit>0 ? '（一致 OK）' : '');
   const typeOk = !!document.getElementById('inType').value;
-  document.getElementById('inSubmit').disabled = !(debit===credit && debit>0 && typeOk);
   if (!typeOk) el.textContent += '　種別を選んでください';
+  const salOk = checkSalaryAndNws(el);
+  document.getElementById('inSubmit').disabled = !(debit===credit && debit>0 && typeOk && salOk);
 }
 document.getElementById('inSubmit').onclick = async () => {
   const errEl = document.getElementById('inErr'), okEl = document.getElementById('inOk');
   errEl.textContent = ''; okEl.textContent = '';
   try {
     const body = { date: document.getElementById('inDate').value, memo: document.getElementById('inMemo').value,
-      typeOverride: typeToSend(), lines: readLines().filter(l => l.amount > 0) };
+      typeOverride: typeToSend(), lines: readLines().filter(l => l.amount > 0),
+      nwsOverride: document.getElementById('inNwsBox').classList.contains('hidden') ? '' : document.getElementById('inNws').value };
     if (!document.getElementById('inType').value) throw new Error('種別を選んでください');
     if (EDIT) {                                         // 履歴から開いた伝票を直す
       await rpc('updateEntry', [EDIT.id, body]);
@@ -1085,7 +1398,7 @@ document.getElementById('inSubmit').onclick = async () => {
     okEl.textContent = '登録しました（伝票ID: ' + result.伝票ID + '）';
     document.getElementById('inMemo').value = '';
     document.getElementById('inLines').innerHTML = '';
-    TYPE_MANUAL = false;
+    TYPE_MANUAL = false; salReset();
     await addLine(); await addLine();
     loadSummary();
   } catch(e) {
@@ -1103,6 +1416,7 @@ function endEdit(){
   document.getElementById('inMemo').value = ''; document.getElementById('inType').value = ''; TYPE_MANUAL = false;
   document.getElementById('inDate').value = localToday();
   document.getElementById('inLines').innerHTML = '';
+  salReset();
 }
 async function startEdit(e){
   EDIT = { id: e.id, entry: e };
@@ -1130,7 +1444,10 @@ async function fillEdit(){
     row.querySelector('.ln-bonus').checked = !!l.bonus;
     if (l.investOverride !== '' && l.investOverride !== undefined) row.dataset.inv = l.investOverride;
   }
+  salReset();
+  document.getElementById('inNws').value = e.nws || '';
   checkBalance();
+  if (hasWithheldSalary()) { const sp = salFromLines(); if (sp.it !== undefined) await salOn(sp); }   // 所得税の行がある給与の伝票は、給与明細の形で開く
 }
 async function prepareInput(){
   if (EDIT) return fillEdit();
